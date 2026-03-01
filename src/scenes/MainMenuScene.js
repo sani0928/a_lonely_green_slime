@@ -6,6 +6,7 @@ import {
 } from "../render/entitySprites.js";
 import { t, getSfxAttackKey } from "../i18n.js";
 import { showSettingsOverlay } from "../ui/settingsOverlay.js";
+import { showGuideOverlay } from "../ui/guideOverlay.js";
 
 const WANDER_SPEED = 28;
 const FLEE_SPEED = 160;
@@ -134,9 +135,11 @@ export default class MainMenuScene extends Phaser.Scene {
     const startX = (width - btnW) / 2;
     const startY = Math.floor(height * 0.4);
     const setY = startY + btnH + btnGap;
+    const guideY = setY + btnH + btnGap;
 
-    // Start 버튼
+    // Start 버튼 (오버레이 닫을 때 호버 초기화용으로 배경·좌표 저장)
     const startBg = this.add.graphics().setDepth(2);
+    this.menuBtn = { startX, startY, setX: (width - btnW) / 2, setY, guideY, btnW, btnH, startBg: null, setBg: null, guideBg: null };
     drawPixelButton(
       startBg,
       startX,
@@ -157,6 +160,7 @@ export default class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(3);
     const startHit = this.add.zone(width / 2, startY + btnH / 2, btnW, btnH).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.startHit = startHit;
     startHit.on("pointerdown", () => {
       const cam = this.cameras.main;
       const w = cam.width;
@@ -183,9 +187,10 @@ export default class MainMenuScene extends Phaser.Scene {
       startBg.clear();
       drawPixelButton(startBg, startX, startY, btnW, btnH, PIXEL.btnStartFill, PIXEL.btnStartHighlight, PIXEL.borderDark, 3);
     });
+    this.menuBtn.startBg = startBg;
 
     // Settings 버튼 (동일 크기)
-    const setX = (width - btnW) / 2;
+    const setX = this.menuBtn.setX;
     const setBg = this.add.graphics().setDepth(2);
     drawPixelButton(setBg, setX, setY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
     this.add
@@ -197,6 +202,7 @@ export default class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(3);
     const setHit = this.add.zone(width / 2, setY + btnH / 2, btnW, btnH).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.setHit = setHit;
     setHit.on("pointerdown", () => showSettingsOverlay(this));
     setHit.on("pointerover", () => {
       setBg.clear();
@@ -206,6 +212,31 @@ export default class MainMenuScene extends Phaser.Scene {
       setBg.clear();
       drawPixelButton(setBg, setX, setY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
     });
+    this.menuBtn.setBg = setBg;
+
+    // 게임설명 버튼 (설정 아래)
+    const guideBg = this.add.graphics().setDepth(2);
+    drawPixelButton(guideBg, (width - btnW) / 2, guideY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
+    this.add
+      .text(width / 2, guideY + btnH / 2, t("menu.howToPlay"), {
+        fontFamily: "Mulmaru",
+        fontSize: "20px",
+        color: "#b8b8d0",
+      })
+      .setOrigin(0.5)
+      .setDepth(3);
+    const guideHit = this.add.zone(width / 2, guideY + btnH / 2, btnW, btnH).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.guideHit = guideHit;
+    guideHit.on("pointerdown", () => showGuideOverlay(this));
+    guideHit.on("pointerover", () => {
+      guideBg.clear();
+      drawPixelButton(guideBg, (width - btnW) / 2, guideY, btnW, btnH, 0x3d3d5c, PIXEL.btnSubHighlight, 0x2a2a40, 2);
+    });
+    guideHit.on("pointerout", () => {
+      guideBg.clear();
+      drawPixelButton(guideBg, (width - btnW) / 2, guideY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
+    });
+    this.menuBtn.guideBg = guideBg;
 
     this.paradeSprites = [];
     const b = {
@@ -480,6 +511,49 @@ export default class MainMenuScene extends Phaser.Scene {
 
       const dir = getDirIndexFromVector(vx, vy, 4);
       s.setFrame(getFrameIndex(entityIndex, dir));
+    }
+  }
+
+  /** DOM 오버레이(가이드/설정)가 열릴 때 호출 — 메뉴 버튼·몬스터 클릭 비활성화 */
+  disableMenuButtons() {
+    this.startHit?.disableInteractive();
+    this.setHit?.disableInteractive();
+    this.guideHit?.disableInteractive();
+    if (this.paradeSprites) {
+      this.paradeSprites.forEach((s) => {
+        if (s.active && s.getData("entityIndex") !== PLAYER_ENTITY_INDEX) {
+          s.disableInteractive();
+        }
+      });
+    }
+  }
+
+  /** DOM 오버레이가 닫힐 때 호출 — 메뉴 버튼·몬스터 클릭 다시 활성화 + 호버 상태 초기화 */
+  enableMenuButtons() {
+    const opt = { useHandCursor: true };
+    this.startHit?.setInteractive(opt);
+    this.setHit?.setInteractive(opt);
+    this.guideHit?.setInteractive(opt);
+    if (this.paradeSprites) {
+      this.paradeSprites.forEach((s) => {
+        if (s.active && s.getData("entityIndex") !== PLAYER_ENTITY_INDEX) {
+          s.setInteractive(opt);
+        }
+      });
+    }
+    // 비활성화 중 pointerout이 발생하지 않아 호버 스타일이 남을 수 있음 → 기본 상태로 다시 그림
+    const m = this.menuBtn;
+    if (m?.startBg) {
+      m.startBg.clear();
+      drawPixelButton(m.startBg, m.startX, m.startY, m.btnW, m.btnH, PIXEL.btnStartFill, PIXEL.btnStartHighlight, PIXEL.borderDark, 3);
+    }
+    if (m?.setBg) {
+      m.setBg.clear();
+      drawPixelButton(m.setBg, m.setX, m.setY, m.btnW, m.btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
+    }
+    if (m?.guideBg) {
+      m.guideBg.clear();
+      drawPixelButton(m.guideBg, m.setX, m.guideY, m.btnW, m.btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
     }
   }
 }

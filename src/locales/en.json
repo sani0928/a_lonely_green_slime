@@ -21,7 +21,16 @@
   "menu": {
     "title": "A lonely green slime",
     "start": "Start",
-    "settings": "Settings"
+    "settings": "Settings",
+    "howToPlay": "How to play",
+    "howToPlayClose": "Close",
+    "guideTabIntro": "Game intro",
+    "guideTabBadges": "Badge list",
+    "guideStory": "A lone green slime in a pixel world. Endless monsters close in—dodge and fight back with your cells to survive. Grow stronger with fragments and badges; last 30 minutes to escape!!",
+    "guideGoal": "Goal\n• Survive as long as you can. Last 30 minutes to earn a score bonus.\n• Submit your final score to the leaderboard and share with other players.",
+    "guideControls": "Controls\n• WASD or Arrow keys: Move\n• ESC: Pause and badge slots",
+    "guideCombat": "Combat\n• Cells orbiting the slime auto-attack nearby enemies.\n• Defeated enemies drop coins → score.\n• Taking damage reduces HP; brief invincibility after hit.",
+    "guideGrowth": "Growth\n• Fragments: Appear on the map. Open them for upgrades or a badge draw.\n• Badges: Equip in empty slots or replace existing badges. Effects apply while equipped."
   },
   "settings": {
     "title": "Settings",
@@ -44,9 +53,12 @@
     "clearBonus": "×1.5 BONUS!",
     "enterNickname": "Enter nickname and submit your score.",
     "nicknamePlaceholder": "Nickname (3–32 chars)",
-    "topPlayers": "Top Players",
-    "recentPrefix": "Recent",
+    "topPlayers": "Top 10",
     "noScoresYet": "No scores submitted yet.",
+    "submittingScore": "Submitting score...",
+    "scoreSubmitted": "Score submitted!",
+    "submitScoreFailed": "Failed to submit score.",
+    "nicknameLengthError": "Nickname must be 3–32 characters.",
     "leaderboardFailed": "Failed to load leaderboard.",
     "replaceConfirm": "Replace \"{{current}}\" with \"{{new}}\"?",
     "feedbackSent": "Feedback sent.",
@@ -54,7 +66,7 @@
     "period30d": "30 days",
     "period1y": "1 year",
     "feedbackLabel": "Feedback",
-    "feedbackModalHeader": "Please share any inconveniences, suggestions, or reviews. Your feedback helps improve the game.",
+    "feedbackModalHeader": "Please share any inconveniences, suggestions, or reviews. Your feedback helps improve the game. Thanks.",
     "feedbackPlaceholder": "Your feedback..",
     "feedbackClose": "Close",
     "feedbackSend": "Send"
@@ -102,7 +114,7 @@
     },
     "fragment_collector": {
       "name": "Fragment Collector",
-      "description": "Fragment chest spawn rate increases by about **30%**."
+      "description": "Fragments spawn rate increases by about **30%**."
     },
     "give_me_more_plus": {
       "name": "Give Me More+",
@@ -141,7 +153,7 @@
       "description": "Max HP limit **+4**. (Stacks with badges of the same effect.)"
     },
     "critical": {
-      "name": "Critical",
+      "name": "Critical!",
       "description": "**20%** chance to deal double damage."
     },
     "smaller_plus": {
@@ -158,7 +170,7 @@
     },
     "extra_fragments": {
       "name": "Extra Fragments",
-      "description": "Max fragment chests on field **+1**."
+      "description": "Max fragments on field **+1**."
     },
     "smaller": {
       "name": "Smaller",
@@ -170,7 +182,7 @@
     },
     "compass": {
       "name": "Compass",
-      "description": "Arrow points to a fragment chest **location**."
+      "description": "Arrow points to a fragments **location**."
     }
   }
 }

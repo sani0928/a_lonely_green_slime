@@ -62,11 +62,13 @@
         </div>
 
         <div class="leaderboard" id="leaderboard">
-          <h3 class="leaderboard-title">Top Players <span class="leaderboard-recent-label" id="leaderboard-recent-label"></span></h3>
-          <div class="leaderboard-period" id="leaderboard-period">
-            <button type="button" class="period-btn" data-period="7d">7 days</button>
-            <button type="button" class="period-btn active" data-period="30d">30 days</button>
-            <button type="button" class="period-btn" data-period="1y">1 year</button>
+          <div class="leaderboard-header">
+            <h3 class="leaderboard-title">Top Players</h3>
+            <div class="leaderboard-period" id="leaderboard-period">
+              <button type="button" class="period-btn" data-period="7d">7 days</button>
+              <button type="button" class="period-btn active" data-period="30d">30 days</button>
+              <button type="button" class="period-btn" data-period="1y">1 year</button>
+            </div>
           </div>
           <div id="leaderboard-list" class="leaderboard-list"></div>
         </div>
@@ -146,6 +148,24 @@
         <div class="overlay-footer" style="margin-top:16px">
           <button type="button" id="settings-close-btn" class="secondary-btn">Settings saved</button>
           <div id="settings-version" class="settings-version" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="guide-overlay" class="guide-overlay" aria-hidden="true">
+      <div class="guide-overlay-backdrop"></div>
+      <div class="guide-overlay-panel">
+        <h2 class="guide-overlay-title" id="guide-overlay-title">How to play</h2>
+        <div class="guide-overlay-tabs" id="guide-overlay-tabs">
+          <button type="button" class="guide-tab active" data-tab="intro" id="guide-tab-intro">Game intro</button>
+          <button type="button" class="guide-tab" data-tab="badges" id="guide-tab-badges">Badge list</button>
+        </div>
+        <div class="guide-overlay-body">
+          <div class="guide-tab-content active" id="guide-content-intro"></div>
+          <div class="guide-tab-content" id="guide-content-badges"></div>
+        </div>
+        <div class="guide-overlay-footer">
+          <button type="button" id="guide-overlay-close" class="primary-btn">Close</button>
         </div>
       </div>
     </div>

@@ -36,5 +36,4 @@ backend/media/
 .DS_Store
 Thumbs.db
 
-# Optional: npm if you add tooling later
 # node_modules/

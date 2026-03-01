@@ -1,12 +1,10 @@
-# A lonely green slime
+# [A lonely green slime](https://a-lonely-green-slime.vercel.app/)
+픽셀 세계에 홀로 남은 초록 슬라임. 끝없이 몰려오는 몬스터를 피하고, 세포로 막아 내며 기어코 살아남을 것이다.. 
+슬라임 조각과 뱃지를 모아 강해지고, 30분만 버티면 탈출할 수 있다!!
 
-웹 기반 슬라임 생존 게임입니다.
+## Directory Structure
+- **root**: JS기반 웹게임 (`index.html`, `src/`, `assets/`)
+- **root/backend**: Django기반 백엔드 (`scores`·`feedback` API, 앱)
 
-**버전**: `src/config/constants.js`의 `GAME_VERSION`만 바꾸면 메뉴·설정 화면과 `index.html` 메타에 반영됩니다. 배포 전 해당 값과 `index.html`의 `<meta name="version">`을 맞춰 주세요.
-
-## 디렉터리 구조
-
-- **루트**: 게임 프론트엔드 (`index.html`, `src/`, `assets/`)
-- **backend/**: Django 프로젝트 (점수·피드백 API, `scores`, `feedback` 앱)
-
-### 추후 추가 예정
+## Version History
+- **v1.0.0**: 게임 시스템, 리더보드, 설정, 게임 가이드 구현

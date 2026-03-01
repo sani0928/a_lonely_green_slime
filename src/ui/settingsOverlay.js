@@ -1,6 +1,7 @@
 /** 설정 오버레이 (언어, 재개 카운트다운, 공격 사운드). localStorage에 저장. */
 import { GAME_VERSION } from "../config/constants.js";
 import { getLocale, getSettings, setLocale, setSetting, t } from "../i18n.js";
+import { refreshOverlayTexts } from "./overlayUi.js";
 
 const OVERLAY_ID = "settings-overlay";
 const LABEL_ID = "settings-language-label";
@@ -113,6 +114,9 @@ export function showSettingsOverlay(scene) {
       closeBtn.addEventListener("click", () => {
         const openedWith = overlay.dataset.localeWhenOpened;
         overlay.classList.remove("visible");
+        if (scene && typeof scene.enableMenuButtons === "function") {
+          scene.enableMenuButtons();
+        }
         if (scene && typeof scene.scene !== "undefined" && getLocale() !== openedWith) {
           scene.scene.restart();
         }
@@ -126,6 +130,7 @@ export function showSettingsOverlay(scene) {
       await setLocale(lang);
       updateOverlayTexts();
       updateActiveLang();
+      refreshOverlayTexts();
     };
 
     const onResumeSpeedClick = (e) => {
@@ -166,5 +171,8 @@ export function showSettingsOverlay(scene) {
   updateActiveSfxAttack();
   const versionEl = document.getElementById("settings-version");
   if (versionEl) versionEl.textContent = `v${GAME_VERSION}`;
+  if (scene && typeof scene.disableMenuButtons === "function") {
+    scene.disableMenuButtons();
+  }
   overlay.classList.add("visible");
 }

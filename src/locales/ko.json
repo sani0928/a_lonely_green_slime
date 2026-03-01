@@ -21,7 +21,16 @@
   "menu": {
     "title": "A lonely green slime",
     "start": "시작",
-    "settings": "설정"
+    "settings": "설정",
+    "howToPlay": "게임설명",
+    "howToPlayClose": "닫기",
+    "guideTabIntro": "게임 소개",
+    "guideTabBadges": "뱃지 목록",
+    "guideStory": "픽셀 세계에 홀로 남은 초록 슬라임. 끝없이 몰려오는 몬스터를 피하고, 세포로 막아 내며 살아남아야 한다. 슬라임 조각과 뱃지를 모아 강해지고, 30분만 버티면 탈출할 수 있다!!",
+    "guideGoal": "목표\n• 최대한 오래 살아남아 30분을 버티면 보너스 점수가 주어진다.\n• 최종 점수는 리더보드에 등록하여 다른 유저들과 공유할 수 있다.",
+    "guideControls": "조작\n• WASD 또는 방향키: 상하좌우 이동\n• ESC: 일시정지 및 뱃지 슬롯",
+    "guideCombat": "전투\n• 슬라임 주위를 도는 세포가 가까운 적을 자동 공격\n• 적 처치 시 코인 드랍 → 점수\n• 피격 시 HP 감소하며 일정 시간 무적",
+    "guideGrowth": "성장\n• 슬라임 조각 상자: 맵에 등장하며 업그레이드 또는 뱃지 뽑기를 할 수 있다.\n• 뱃지: 빈 슬롯 혹은 기존 뱃지와 교체하여 장착. 장착하는 동안 뱃지의 효과가 발동된다."
   },
   "settings": {
     "title": "설정",
@@ -44,9 +53,12 @@
     "clearBonus": "×1.5 BONUS!",
     "enterNickname": "닉네임을 입력하고 점수를 등록하세요.",
     "nicknamePlaceholder": "닉네임 (3–32자)",
-    "topPlayers": "상위 플레이어",
-    "recentPrefix": "최근",
+    "topPlayers": "상위 10 플레이어",
     "noScoresYet": "아직 제출된 점수가 없습니다.",
+    "submittingScore": "점수 등록 중...",
+    "scoreSubmitted": "등록 완료되었습니다.",
+    "submitScoreFailed": "점수 등록에 실패했습니다.",
+    "nicknameLengthError": "닉네임은 3–32자로 입력해 주세요.",
     "leaderboardFailed": "리더보드를 불러오지 못했습니다.",
     "replaceConfirm": "\"{{current}}\"을(를) \"{{new}}\"(으)로 바꿀까요?",
     "feedbackSent": "피드백이 전송되었습니다.",
@@ -54,7 +66,7 @@
     "period30d": "30일",
     "period1y": "1년",
     "feedbackLabel": "피드백",
-    "feedbackModalHeader": "플레이하면서 불편했던 점, 개선사항, 평가 등 편하게 적어주세요. 개발에 많은 도움이 됩니다.",
+    "feedbackModalHeader": "플레이하면서 불편했던 점, 개선사항, 평가 등 모든 편하게 적어주세요. 개발에 많은 도움이 됩니다. 감사합니다.",
     "feedbackPlaceholder": "의견을 적어주세요..",
     "feedbackClose": "닫기",
     "feedbackSend": "보내기"

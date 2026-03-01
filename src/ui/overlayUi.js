@@ -5,6 +5,16 @@ import { BADGES } from "../badges/badgeDefinitions.js";
 import { t, formatBold } from "../i18n.js";
 import { getDashboardStatsForOverlay } from "../systems/hudSystem.js";
 
+let overlayTextsRefreshFn = null;
+
+/**
+ * 언어 변경 시 게임오버·리더보드·피드백·일시정지·확인 다이얼로그 등 모든 오버레이 문구를 다시 그립니다.
+ * 설정에서 언어를 바꾼 뒤 호출하면 새로고침 없이 적용됩니다.
+ */
+export function refreshOverlayTexts() {
+  if (typeof overlayTextsRefreshFn === "function") overlayTextsRefreshFn();
+}
+
 export function setupOverlayCallbacks(phaserGame) {
   const overlay = document.getElementById("overlay");
   const overlayTitle = overlay
@@ -54,48 +64,42 @@ export function setupOverlayCallbacks(phaserGame) {
   const overlayStatsAttack = document.getElementById("overlay-stats-attack");
   const overlayStatsBadges = document.getElementById("overlay-stats-badges");
 
-  // Apply i18n to static overlay labels (run once when callbacks are set up)
-  const overlayScoreP = overlay?.querySelector(".overlay-score");
-  if (overlayScoreP?.firstChild) {
-    overlayScoreP.firstChild.nodeValue = t("overlay.scoreLabel") + " ";
+  function refreshOverlayTextsInternal() {
+    const overlayScoreP = overlay?.querySelector(".overlay-score");
+    if (overlayScoreP?.firstChild) overlayScoreP.firstChild.nodeValue = t("overlay.scoreLabel") + " ";
+    const enterNicknameEl = overlay?.querySelector(".field-label");
+    if (enterNicknameEl) enterNicknameEl.textContent = t("overlay.enterNickname");
+    if (nicknameInput) nicknameInput.placeholder = t("overlay.nicknamePlaceholder");
+    if (submitBtn) submitBtn.textContent = t("common.submit");
+    if (overlayMainBtn) overlayMainBtn.textContent = t("pause.toMain");
+    if (restartBtn) restartBtn.textContent = t("common.restart");
+    const topPlayersH3 = document.getElementById("leaderboard")?.querySelector("h3");
+    if (topPlayersH3 && topPlayersH3.firstChild) topPlayersH3.firstChild.nodeValue = t("overlay.topPlayers");
+    const periodBtns = document.querySelectorAll(".period-btn[data-period]");
+    periodBtns.forEach((btn) => {
+      const p = btn.getAttribute("data-period");
+      if (p === "7d") btn.textContent = t("overlay.period7d");
+      else if (p === "30d") btn.textContent = t("overlay.period30d");
+      else if (p === "1y") btn.textContent = t("overlay.period1y");
+    });
+    if (feedbackOpenBtn) feedbackOpenBtn.textContent = t("overlay.feedbackLabel");
+    if (feedbackModalHeader) feedbackModalHeader.textContent = t("overlay.feedbackModalHeader");
+    if (feedbackModalText) feedbackModalText.placeholder = t("overlay.feedbackPlaceholder");
+    if (feedbackModalClose) feedbackModalClose.textContent = t("overlay.feedbackClose");
+    if (feedbackModalSubmit) feedbackModalSubmit.textContent = t("overlay.feedbackSend");
+    if (confirmReplaceYes) confirmReplaceYes.textContent = t("common.yes");
+    if (confirmReplaceNo) confirmReplaceNo.textContent = t("common.no");
+    const pauseTitleEl = document.querySelector("#pause-overlay .pause-title");
+    if (pauseTitleEl) pauseTitleEl.textContent = t("pause.paused");
+    const pauseSubEl = document.querySelector("#pause-overlay .pause-sub");
+    if (pauseSubEl) pauseSubEl.textContent = t("pause.pressEscToResume");
+    if (pauseBtnMain) pauseBtnMain.textContent = t("pause.toMain");
+    if (pauseBtnQuit) pauseBtnQuit.textContent = t("pause.quitGame");
+    if (pauseConfirmYes) pauseConfirmYes.textContent = t("common.yes");
+    if (pauseConfirmNo) pauseConfirmNo.textContent = t("common.no");
   }
-  const enterNicknameEl = overlay?.querySelector(".field-label");
-  if (enterNicknameEl) enterNicknameEl.textContent = t("overlay.enterNickname");
-  if (nicknameInput) nicknameInput.placeholder = t("overlay.nicknamePlaceholder");
-  if (submitBtn) submitBtn.textContent = t("common.submit");
-  if (overlayMainBtn) overlayMainBtn.textContent = t("pause.toMain");
-  if (restartBtn) restartBtn.textContent = t("common.restart");
-  const topPlayersH3 = document.getElementById("leaderboard")?.querySelector("h3");
-  const leaderboardRecentLabel = document.getElementById("leaderboard-recent-label");
-  function updateLeaderboardRecentLabel() {
-    if (!leaderboardRecentLabel) return;
-    const periodText = currentLeaderboardPeriod === "7d" ? t("overlay.period7d") : currentLeaderboardPeriod === "1y" ? t("overlay.period1y") : t("overlay.period30d");
-    leaderboardRecentLabel.textContent = t("overlay.recentPrefix") + " " + periodText;
-  }
-  if (topPlayersH3 && topPlayersH3.firstChild) topPlayersH3.firstChild.nodeValue = t("overlay.topPlayers") + " ";
-  updateLeaderboardRecentLabel();
-  const periodBtns = document.querySelectorAll(".period-btn[data-period]");
-  periodBtns.forEach((btn) => {
-    const p = btn.getAttribute("data-period");
-    if (p === "7d") btn.textContent = t("overlay.period7d");
-    else if (p === "30d") btn.textContent = t("overlay.period30d");
-    else if (p === "1y") btn.textContent = t("overlay.period1y");
-  });
-  if (feedbackOpenBtn) feedbackOpenBtn.textContent = t("overlay.feedbackLabel");
-  if (feedbackModalHeader) feedbackModalHeader.textContent = t("overlay.feedbackModalHeader");
-  if (feedbackModalText) feedbackModalText.placeholder = t("overlay.feedbackPlaceholder");
-  if (feedbackModalClose) feedbackModalClose.textContent = t("overlay.feedbackClose");
-  if (feedbackModalSubmit) feedbackModalSubmit.textContent = t("overlay.feedbackSend");
-  if (confirmReplaceYes) confirmReplaceYes.textContent = t("common.yes");
-  if (confirmReplaceNo) confirmReplaceNo.textContent = t("common.no");
-  const pauseTitleEl = document.querySelector("#pause-overlay .pause-title");
-  if (pauseTitleEl) pauseTitleEl.textContent = t("pause.paused");
-  const pauseSubEl = document.querySelector("#pause-overlay .pause-sub");
-  if (pauseSubEl) pauseSubEl.textContent = t("pause.pressEscToResume");
-  if (pauseBtnMain) pauseBtnMain.textContent = t("pause.toMain");
-  if (pauseBtnQuit) pauseBtnQuit.textContent = t("pause.quitGame");
-  if (pauseConfirmYes) pauseConfirmYes.textContent = t("common.yes");
-  if (pauseConfirmNo) pauseConfirmNo.textContent = t("common.no");
+  overlayTextsRefreshFn = refreshOverlayTextsInternal;
+  refreshOverlayTextsInternal();
 
   function playUiSound(key, config) {
     if (!phaserGame || !phaserGame.sound || !phaserGame.sound.play) return;
@@ -122,7 +126,7 @@ export function setupOverlayCallbacks(phaserGame) {
       const items = await fetchLeaderboard(10, currentLeaderboardPeriod);
       if (!items || items.length === 0) {
         leaderboardList.innerHTML =
-          '<div class="status-text">No scores submitted yet.</div>';
+          '<div class="status-text">' + t("overlay.noScoresYet") + '</div>';
         return;
       }
       items.forEach((item, index) => {
@@ -132,7 +136,7 @@ export function setupOverlayCallbacks(phaserGame) {
         rank.className = "leaderboard-rank";
         rank.textContent = `#${index + 1}`;
         const name = document.createElement("span");
-        name.className = "leaderboard-name";
+        name.className = "leaderboard-name" + (index === 0 ? " leaderboard-name--gold" : index === 1 ? " leaderboard-name--silver" : index === 2 ? " leaderboard-name--bronze" : "");
         name.textContent = item.nickname || "";
         const score = document.createElement("span");
         score.className = "leaderboard-score";
@@ -159,7 +163,6 @@ export function setupOverlayCallbacks(phaserGame) {
         currentLeaderboardPeriod = period;
         leaderboardPeriodContainer.querySelectorAll(".period-btn").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
-        updateLeaderboardRecentLabel();
         refreshLeaderboard();
       });
     });
@@ -187,6 +190,10 @@ export function setupOverlayCallbacks(phaserGame) {
   }
   if (feedbackModal && feedbackModal.querySelector(".feedback-modal-backdrop")) {
     feedbackModal.querySelector(".feedback-modal-backdrop").addEventListener("click", closeFeedbackModal);
+  }
+  // 피드백 입력 시 띄어쓰기 등이 동작하도록 키 이벤트가 문서/게임으로 전파되지 않게 함
+  if (feedbackModalText) {
+    feedbackModalText.addEventListener("keydown", (e) => e.stopPropagation());
   }
   if (feedbackModalSubmit && feedbackModalText) {
     feedbackModalSubmit.addEventListener("click", async () => {
@@ -655,21 +662,21 @@ export function setupOverlayCallbacks(phaserGame) {
     clearStatus();
     const nickname = nicknameInput.value.trim();
     if (nickname.length < 3 || nickname.length > 32) {
-      setStatus("Nickname must be 3–32 characters.", true);
+      setStatus(t("overlay.nicknameLengthError"), true);
       return;
     }
     const scene = phaserGame.scene.keys.MainScene;
     const score = scene ? scene.score : 0;
 
     submitBtn.disabled = true;
-    setStatus("Submitting score...");
+    setStatus(t("overlay.submittingScore"));
 
     try {
       await submitScore(nickname, score);
-      setStatus("Score submitted!");
+      setStatus(t("overlay.scoreSubmitted"));
       await refreshLeaderboard();
     } catch (err) {
-      setStatus(err.message || "Failed to submit score.", true);
+      setStatus(err.message || t("overlay.submitScoreFailed"), true);
     } finally {
       submitBtn.disabled = false;
     }
