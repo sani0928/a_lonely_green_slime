@@ -46,7 +46,7 @@ export const BADGES = [
     id: "regen",
     name: "Regen",
     description:
-      "Heal **+1** HP every 60 seconds, but taking damage adds **+1** damage.",
+      "Heal **+2** HP every 60 seconds, but taking damage adds **+1** damage.",
     rarity: "unique",
     category: "survival",
     maxStacks: 1,
@@ -73,7 +73,7 @@ export const BADGES = [
     id: "blood_hungry",
     name: "Blood Hungry",
     description:
-      "Restore **+1** HP every 300 kills; taking damage adds **+1** damage.",
+      "Restore **+2** HP every 300 kills; taking damage adds **+1** damage.",
     rarity: "epic",
     category: "survival",
     maxStacks: 1,

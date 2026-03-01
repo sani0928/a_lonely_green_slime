@@ -1,11 +1,11 @@
 // 게임 전체에서 사용하는 튜닝 상수들
 
 /** 배포/업데이트 시 여기만 바꾸면 됨 (메뉴·설정 화면 등에 표시) */
-export const GAME_VERSION = "1.0.0";
+export const GAME_VERSION = "0.9.0";
 
 // --- 개발 모드 플래그 ---
 // true로 두면 밸런스 무시하고 테스트용 극단 값(HP/탄환/보물 상한 99, 10킬마다 보물 등)을 사용한다.
-export const DEV_MODE = false;
+export const DEV_MODE = true;
 export const DEV_MAX_CAP = 20;
 export const DEV_CHEST_KILL_INTERVAL = 10;
 
@@ -19,7 +19,7 @@ export const WORLD_WIDTH = 3200;
 export const WORLD_HEIGHT = 3200;
 
 // 플레이어
-export const PLAYER_BASE_HP = 7;
+export const PLAYER_BASE_HP = 5;
 export const PLAYER_MAX_HP_CAP = 10;
 export const PLAYER_BASE_SPEED = 240;
 /** 30분 기준 밸런스: 속도 상한(초반 성장감, 후반은 실력 의존) */
@@ -42,7 +42,7 @@ export const ENEMY_SPEED_FACTOR_MAX = 1.5;
 /** 적 속도 배율이 상한에 수렴하는 시간 상수(초) */
 export const ENEMY_SPEED_RAMP_SEC = 420;
 /** 적 체력/추가 스폰 수용 난이도: 1 + t / ENEMY_DIFFICULTY_TIME_SCALE */
-export const ENEMY_DIFFICULTY_TIME_SCALE = 90;
+export const ENEMY_DIFFICULTY_TIME_SCALE = 60;
 export const INITIAL_SPAWN_DELAY_MS = 650;
 export const MIN_SPAWN_DELAY_MS = 380;
 /** 플레이어가 매우 강할 때(탄환/공격력 상한 근접) 압박 유지용 최소 스폰 간격 */
@@ -66,53 +66,53 @@ export const ENEMY_CAP_RAMP_END_SEC = 24 * 60;
 /** 플레이어에서 이 거리보다 먼 적은 제거 (화면 밖에 쌓여 스폰이 막히는 것 방지) */
 export const ENEMY_CULL_DISTANCE = 1800;
 export const ENEMY_SPAWN_MARGIN = 80;
-export const ENEMY_BASE_HP = 42;
-export const ENEMY_HP_PER_DIFFICULTY = 18;
+export const ENEMY_BASE_HP = 48;
+export const ENEMY_HP_PER_DIFFICULTY = 20;
 
 // 30분(고수 기준 최대 플레이) 밸런스: weak/mid/strong 각 2종, 다양성·타수 조절
 export const ENEMY_TYPES = {
   // --- weak (초반 다수, 후반에도 소량) ---
   runner: {
-    baseHp: 16,
+    baseHp: 18,
     score: 10,
-    speedMultiplier: 1.35,
+    speedMultiplier: 1.55,
     tier: "weak",
   },
   mite: {
-    baseHp: 10,
+    baseHp: 12,
     score: 10,
-    speedMultiplier: 1.6,
+    speedMultiplier: 1.7,
     tier: "weak",
   },
   // --- mid (중반 주력) ---
   grunt: {
-    baseHp: 28,
+    baseHp: 32,
     score: 20,
     speedMultiplier: 1,
     tier: "mid",
   },
   soldier: {
-    baseHp: 36,
+    baseHp: 40,
     score: 20,
     speedMultiplier: 0.9,
     tier: "mid",
   },
   // --- shooter (원거리 mid) ---
   shooter: {
-    baseHp: 30,
+    baseHp: 34,
     score: 50,
     speedMultiplier: 0.85,
     tier: "mid",
   },
   // --- strong (후반 압박, 30분 구간 탱커) ---
   brute: {
-    baseHp: 52,
+    baseHp: 62,
     score: 30,
     speedMultiplier: 0.8,
     tier: "strong",
   },
   titan: {
-    baseHp: 72,
+    baseHp: 84,
     score: 30,
     speedMultiplier: 0.6,
     tier: "strong",

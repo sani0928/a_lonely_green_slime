@@ -486,7 +486,7 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
     let sepX = 0;
     let sepY = 0;
     let sepCount = 0;
-    const separationRadius = 52;
+    const separationRadius = 72;
     const separationRadiusSq = separationRadius * separationRadius;
     const neighbors = getNeighborsForSeparation(enemy, grid, cellSize);
     for (let i = 0; i < neighbors.length; i += 1) {

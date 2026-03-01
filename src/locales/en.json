@@ -126,7 +126,7 @@
     },
     "regen": {
       "name": "Regen",
-      "description": "Heal **+1** HP every 60 seconds, but taking damage adds **+1** damage."
+      "description": "Heal **+2** HP every 60 seconds, but taking damage adds **+1** damage."
     },
     "one_more": {
       "name": "One More",
@@ -138,7 +138,7 @@
     },
     "blood_hungry": {
       "name": "Blood Hungry",
-      "description": "Restore **+1** HP every 300 kills; taking damage adds **+1** damage."
+      "description": "Restore **+2** HP every 300 kills; taking damage adds **+1** damage."
     },
     "shooter_hunter": {
       "name": "Shooter Hunter",

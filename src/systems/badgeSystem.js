@@ -82,6 +82,10 @@ export function equipBadgeAtSlot(scene, badgeId, slotIndex) {
   // 장착/교체 후, 배지 보너스에 따라 HP/탄환 최대 한도 재계산
   recalcCapsFromBadges(scene);
   updatePlayerScaleFromBadges(scene);
+  // HUD HP 표시 동기화 (장착만 하고 현재 HP는 변경하지 않았음을 화면에 반영)
+  if (scene.hpText && typeof scene.hpText.setText === "function") {
+    scene.hpText.setText(`${scene.playerHp ?? 0}/${scene.playerMaxHp ?? 0}`);
+  }
 }
 
 export function getBadgesByRarity(rarity) {
@@ -143,17 +147,14 @@ export function onEnemyHit(scene, enemy) {
 export function onEnemyKilled(scene, enemy) {
   if (!enemy) return;
 
-  // Blood Hungry: 300킬마다 HP +1 (not at full health)
+  // Blood Hungry: 300킬마다 HP +2 (not at full health)
   if (hasBadge(scene, "blood_hungry")) {
     scene.bloodHungryKillCounter = (scene.bloodHungryKillCounter || 0) + 1;
     if (scene.bloodHungryKillCounter >= 300) {
       scene.bloodHungryKillCounter -= 300;
       if (scene.playerHp < scene.playerMaxHp) {
         const beforeHp = scene.playerHp || 0;
-        scene.playerHp += 1;
-        if (scene.playerHp > scene.playerMaxHp) {
-          scene.playerHp = scene.playerMaxHp;
-        }
+        scene.playerHp = Math.min((scene.playerHp || 0) + 2, scene.playerMaxHp ?? 0);
         const healed = scene.playerHp - beforeHp;
         if (scene.hpText) {
           scene.hpText.setText(`${scene.playerHp}/${scene.playerMaxHp}`);
@@ -180,12 +181,13 @@ export function updateRegenBadge(scene, dt) {
   const hp = scene.playerHp ?? 0;
   const maxHp = scene.playerMaxHp ?? hp;
   if (hp >= maxHp) return;
-  scene.playerHp = Math.min(hp + 1, maxHp);
+  const healAmount = 2;
+  scene.playerHp = Math.min(hp + healAmount, maxHp);
   if (scene.hpText) {
     scene.hpText.setText(`${scene.playerHp}/${scene.playerMaxHp}`);
   }
   if (typeof scene.showHpHeal === "function") {
-    scene.showHpHeal(1);
+    scene.showHpHeal(healAmount);
   }
 }
 
@@ -281,6 +283,7 @@ export function updatePlayerScaleFromBadges(scene) {
 
 // 현재 장착된 뱃지를 기준으로 HP/탄환 최대 한도를 재계산하고,
 // 이미 최대 한도를 초과한 값이 있다면 새 캡에 맞춰 잘라낸다.
+// 의도: 뱃지 장착 시 현재 HP는 절대 회복하지 않음(캡 초과 시에만 상한으로 자름).
 function recalcCapsFromBadges(scene) {
   ensureState(scene);
 
@@ -292,6 +295,7 @@ function recalcCapsFromBadges(scene) {
   // HUD 표시(cap)와 실제 최대 체력 동기화: 허용 상한(hpCap)으로 설정 (PLAYER_BASE_HP만 쓰면 max가 8로 남아 HP+2/비활성화 버그 발생)
   scene.playerMaxHp = hpCap;
 
+  // 캡 초과 시에만 자름. 현재 HP를 올리거나 풀피로 채우지 않음.
   if (typeof scene.playerHp === "number" && scene.playerHp > hpCap) {
     scene.playerHp = hpCap;
   }
