@@ -146,7 +146,7 @@ export function createHud(scene) {
     .setScrollFactor(0)
     .setDepth(2);
   scene.nextCellValueText = scene.add
-    .text(panelLeft + scene.nextCellLabelText.width, panelY + 28, "2/16", {
+    .text(panelLeft + scene.nextCellLabelText.width, panelY + 28, `2/${CELL_MAX_COUNT}`, {
       ...fontStyleSmall,
       fill: "#ffe082",
     })
@@ -287,7 +287,7 @@ export function updateDashboard(scene) {
 
   if (scene.nextCellValueText) {
     const n = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
-    const maxC = DEV_MODE ? DEV_MAX_CAP : (scene.cellMaxCount ?? CELL_MAX_COUNT ?? 16) + (BadgeSystem.getCellMaxBonus(scene) || 0);
+    const maxC = DEV_MODE ? DEV_MAX_CAP : (scene.cellMaxCount ?? CELL_MAX_COUNT) + (BadgeSystem.getCellMaxBonus(scene) || 0);
     const cellsValueStr = `${n}/${maxC}`;
     updateStatWithBounce(scene, "cells", scene.nextCellValueText, cellsValueStr);
   }
@@ -354,7 +354,7 @@ export function getDashboardStatsForOverlay(scene) {
   if (DEV_MODE) {
     cells = `${t("common.cells")}: ${nCell}/${DEV_MAX_CAP}`;
   } else {
-    const baseMax = scene.cellMaxCount ?? CELL_MAX_COUNT ?? 16;
+    const baseMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
     const cellBonus = BadgeSystem.getCellMaxBonus(scene);
     const max = baseMax + cellBonus;
     cells = `${t("common.cells")}: ${nCell}/${max}`;

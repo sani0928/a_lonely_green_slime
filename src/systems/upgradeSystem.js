@@ -4,6 +4,7 @@ import {
   ATTACK_UPGRADE_AMOUNTS,
   PLAYER_BASE_ATTACK,
   PLAYER_MAX_HP_CAP,
+  CELL_MAX_COUNT,
   DEV_MODE,
   DEV_MAX_CAP,
   DEV_CHEST_KILL_INTERVAL,
@@ -691,7 +692,7 @@ export function onPlayerPickupItem(scene, player, item) {
   const attackCount = scene.attackUpgradeCount ?? 0;
   const maxAttack = ATTACK_UPGRADE_MAX ?? 10;
   const cellCount = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
-  const cellBaseMax = scene.cellMaxCount ?? 16;
+  const cellBaseMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
   const cellMax = cellBaseMax + getCellMaxBonus(scene);
   const currentHp = scene.playerHp ?? 0;
   const currentMaxHp = scene.playerMaxHp ?? (PLAYER_MAX_HP_CAP ?? 10);
@@ -752,7 +753,7 @@ export function applyUpgrade(scene, choice) {
       if (DEV_MODE) {
         scene.cellActiveCount = Math.min(current + 1, DEV_MAX_CAP);
       } else {
-        const baseMax = scene.cellMaxCount ?? 16;
+        const baseMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
         const cellCap = baseMax + getCellMaxBonus(scene);
         scene.cellActiveCount = Math.min(current + 1, cellCap);
       }

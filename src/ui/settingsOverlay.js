@@ -1,4 +1,5 @@
 /** 설정 오버레이 (언어, 재개 카운트다운, 공격 사운드). localStorage에 저장. */
+import { GAME_VERSION } from "../config/constants.js";
 import { getLocale, getSettings, setLocale, setSetting, t } from "../i18n.js";
 
 const OVERLAY_ID = "settings-overlay";
@@ -163,5 +164,7 @@ export function showSettingsOverlay(scene) {
   updateActiveLang();
   updateActiveResumeSpeed();
   updateActiveSfxAttack();
+  const versionEl = document.getElementById("settings-version");
+  if (versionEl) versionEl.textContent = `v${GAME_VERSION}`;
   overlay.classList.add("visible");
 }

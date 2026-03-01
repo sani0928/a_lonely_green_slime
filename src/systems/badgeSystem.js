@@ -299,7 +299,7 @@ function recalcCapsFromBadges(scene) {
   // --- 탄환(Cells) 캡 재계산 ---
   const baseCellMax = DEV_MODE
     ? DEV_MAX_CAP
-    : scene.cellMaxCount ?? CELL_MAX_COUNT ?? 10;
+    : scene.cellMaxCount ?? CELL_MAX_COUNT;
   const cellBonus = DEV_MODE ? 0 : getCellMaxBonus(scene);
   const cellCap = baseCellMax + cellBonus;
 

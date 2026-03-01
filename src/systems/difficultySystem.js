@@ -11,6 +11,7 @@ import {
   ENEMY_SPEED_RAMP_SEC,
   ENEMY_DIFFICULTY_TIME_SCALE,
   ATTACK_UPGRADE_MAX,
+  CELL_MAX_COUNT,
   MAX_ACTIVE_ENEMIES_BASE,
   MAX_ACTIVE_ENEMIES_LATE,
   ENEMY_CAP_RAMP_START_SEC,
@@ -23,7 +24,7 @@ import {
 export function isStrongPlayer(scene) {
   const attackCount = scene.attackUpgradeCount ?? 0;
   const cellCount = scene.cellActiveCount ?? scene.cellBaseCount ?? 2;
-  const cellMax = scene.cellMaxCount ?? 16;
+  const cellMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
   return attackCount >= 16 && cellCount >= cellMax - 2;
 }
 
@@ -49,7 +50,7 @@ export function getPlayerStrength(scene) {
     attackMax > 0 ? Phaser.Math.Clamp(attackCount / attackMax, 0, 1) : 0;
 
   const cellCount = scene.cellActiveCount ?? scene.cellBaseCount ?? 2;
-  const cellMax = scene.cellMaxCount ?? 16;
+  const cellMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
   const cellRatio =
     cellMax > 2
       ? Phaser.Math.Clamp((cellCount - 2) / (cellMax - 2), 0, 1)
