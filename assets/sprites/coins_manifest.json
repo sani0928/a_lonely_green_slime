@@ -1,0 +1,42 @@
+{
+  "file": "coins.png",
+  "tile_size": [
+    128,
+    128
+  ],
+  "count": 4,
+  "tiles": [
+    {
+      "name": "Coin_Copper",
+      "index": 0,
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    {
+      "name": "Coin_Silver",
+      "index": 1,
+      "x": 128,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    {
+      "name": "Coin_Gold",
+      "index": 2,
+      "x": 256,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    {
+      "name": "Coin_Diamond",
+      "index": 3,
+      "x": 384,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    }
+  ]
+}

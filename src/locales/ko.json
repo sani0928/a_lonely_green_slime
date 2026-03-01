@@ -1,0 +1,176 @@
+{
+  "common": {
+    "score": "점수",
+    "fragments": "슬라임 조각",
+    "cells": "세포",
+    "badges": "뱃지",
+    "badgeDraw": "뱃지 뽑기",
+    "hp": "HP",
+    "attack": "공격력",
+    "kills": "처치 수",
+    "submit": "등록",
+    "restart": "다시 시작",
+    "yes": "예",
+    "no": "아니오",
+    "skip": "건너뛰기",
+    "again": "한 번 더",
+    "lockedSlot": "잠긴 슬롯",
+    "emptySlot": "빈 슬롯",
+    "nextBadgeSlotIn": "다음 뱃지 슬롯 개방까지 {{time}}"
+  },
+  "menu": {
+    "title": "A lonely green slime",
+    "start": "시작",
+    "settings": "설정"
+  },
+  "settings": {
+    "title": "설정",
+    "language": "언어",
+    "en": "EN",
+    "ko": "KO",
+    "resumeCountdown": "게임 재개 시 카운트다운",
+    "resumeNormal": "3.. 2.. 1..",
+    "resumeFast": "3,2,1",
+    "attackSound": "타격음",
+    "attackSound1": "1",
+    "attackSound2": "2",
+    "attackSound3": "3",
+    "close": "설정 완료"
+  },
+  "overlay": {
+    "gameOver": "Game Over",
+    "clear": "Clear!!",
+    "scoreLabel": "점수:",
+    "clearBonus": "×1.5 BONUS!",
+    "enterNickname": "닉네임을 입력하고 점수를 등록하세요.",
+    "nicknamePlaceholder": "닉네임 (3–32자)",
+    "topPlayers": "상위 플레이어",
+    "recentPrefix": "최근",
+    "noScoresYet": "아직 제출된 점수가 없습니다.",
+    "leaderboardFailed": "리더보드를 불러오지 못했습니다.",
+    "replaceConfirm": "\"{{current}}\"을(를) \"{{new}}\"(으)로 바꿀까요?",
+    "feedbackSent": "피드백이 전송되었습니다.",
+    "period7d": "7일",
+    "period30d": "30일",
+    "period1y": "1년",
+    "feedbackLabel": "피드백",
+    "feedbackModalHeader": "플레이하면서 불편했던 점, 개선사항, 평가 등 편하게 적어주세요. 개발에 많은 도움이 됩니다.",
+    "feedbackPlaceholder": "의견을 적어주세요..",
+    "feedbackClose": "닫기",
+    "feedbackSend": "보내기"
+  },
+  "upgrade": {
+    "title": "슬라임 조각 획득!",
+    "chooseUpgrade": "원하는 효과를 선택하세요.",
+    "chooseWhatYouWant": "원하는 것을 선택하세요.",
+    "pickedUp": "획득",
+    "badgeReplace": "뱃지 교체",
+    "cellsPlus1": "세포 +1",
+    "attackUp": "공격력 증가",
+    "hpPlus2": "HP +2",
+    "rollingBadge": "뱃지 뽑는 중...",
+    "newFragmentAppeared": "새로운 슬라임 조각이 나타났어요!",
+    "spinOnceMore": "뱃지 뽑기를 한 번 더 할 수 있어요.",
+    "scorePlus": "점수 +{{value}}",
+    "badgeSlotsPlus1": "5분이 지나 뱃지 슬롯이 +1 되었습니다.",
+    "clickToEquip": "클릭하여 장착",
+    "openAfter": "{{time}} 후 개방",
+    "alreadyEquippedDud": "이미 장착 중인 뱃지입니다.. (꽝이란 거죠)"
+  },
+  "pause": {
+    "paused": "일시정지",
+    "pressEscToResume": "ESC를 누르면 게임 재개",
+    "toMain": "메인으로",
+    "quitGame": "게임종료",
+    "confirmToMain": "현재 게임 진행상황을 포기하고 메인으로 가시겠습니까?",
+    "confirmQuit": "바로 최종 스코어를 등록하시겠습니까?"
+  },
+  "rarity": {
+    "normal": "노멀",
+    "epic": "에픽",
+    "unique": "유니크"
+  },
+  "badge": {
+    "rarityBadge": "{{rarity}} 뱃지",
+    "chain_attack": {
+      "name": "연쇄 타격",
+      "description": "세포가 적을 맞히면, 근처 다른 몬스터를 **연쇄 타격**한 뒤 슬라임에게 돌아옵니다."
+    },
+    "i_am_legend": {
+      "name": "나는 전설이다",
+      "description": "필드에 스폰되는 몬스터를 **1.5배** 늘립니다."
+    },
+    "fragment_collector": {
+      "name": "슬라임 조각 수집가",
+      "description": "필드에 등장하는 슬라임 조각 상자의 스폰 빈도가 약 **30%** 증가합니다."
+    },
+    "give_me_more_plus": {
+      "name": "추가 점수+",
+      "description": "몬스터가 드랍하는 코인의 점수가 **2배** 추가됩니다. (동일 효과 뱃지와 중첩 가능)"
+    },
+    "give_me_more": {
+      "name": "추가 점수",
+      "description": "몬스터가 드랍하는 코인의 점수가 **1.5배** 추가됩니다. (동일 효과 뱃지와 중첩 가능)"
+    },
+    "regen": {
+      "name": "자힐",
+      "description": "60초마다 HP **+1**을 회복하지만, 받는 데미지 역시 **+1** 추가됩니다."
+    },
+    "one_more": {
+      "name": "빠칭코 중독",
+      "description": "뱃지 뽑기를 **한 번 더** 할 수 있습니다."
+    },
+    "cell_limit_plus": {
+      "name": "추가 세포+",
+      "description": "최대 세포 한도가 **+2** 증가합니다. (동일 효과 뱃지와 중첩 가능)"
+    },
+    "blood_hungry": {
+      "name": "드라큘라",
+      "description": "300킬마다 HP **+1**을 회복하지만, 받는 데미지 역시 **+1** 추가됩니다."
+    },
+    "shooter_hunter": {
+      "name": "원딜 뭐함?",
+      "description": "세포가 **원거리 몬스터**를 우선적으로 타겟팅합니다."
+    },
+    "runner": {
+      "name": "허리업!",
+      "description": "슬라임의 기본 **이동 속도**가 증가합니다."
+    },
+    "extra_heart_limit_plus": {
+      "name": "추가 라이프+",
+      "description": "최대 HP 한도가 **+4** 증가합니다. (동일 효과 뱃지와 중첩 가능)"
+    },
+    "critical": {
+      "name": "크리티컬!",
+      "description": "**20%** 확률로 적에게 2배 피해를 줍니다."
+    },
+    "smaller_plus": {
+      "name": "작아져볼게 얍+",
+      "description": "슬라임이 **더** 작아집니다. (동일 효과 뱃지와 중첩 가능)"
+    },
+    "cell_limit": {
+      "name": "추가 세포",
+      "description": "최대 세포 한도가 **+1** 증가합니다. (동일 효과 뱃지와 중첩 가능)"
+    },
+    "additional_heart_limit": {
+      "name": "추가 라이프",
+      "description": "최대 HP 한도가 **+2** 증가합니다."
+    },
+    "extra_fragments": {
+      "name": "추가 슬라임 조각",
+      "description": "필드에 동시에 존재할 수 있는 최대 슬라임 조각 수가 **+1** 증가합니다."
+    },
+    "smaller": {
+      "name": "작아져볼게 얍",
+      "description": "슬라임이 **약간** 작아집니다."
+    },
+    "magnetic": {
+      "name": "끌어당김의 법칙",
+      "description": "**코인**이 슬라임에게 끌려옵니다."
+    },
+    "compass": {
+      "name": "네비게이션",
+      "description": "화살표가 슬라임 조각 상자의 **위치**를 안내합니다."
+    }
+  }
+}

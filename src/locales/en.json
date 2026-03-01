@@ -1,0 +1,176 @@
+{
+  "common": {
+    "score": "Score",
+    "fragments": "Fragments",
+    "cells": "Cells",
+    "badges": "Badges",
+    "badgeDraw": "Badge Draw",
+    "hp": "HP",
+    "attack": "Attack",
+    "kills": "Kills",
+    "submit": "Submit",
+    "restart": "Restart",
+    "yes": "Yes",
+    "no": "No",
+    "skip": "Skip",
+    "again": "Again",
+    "lockedSlot": "Locked slot",
+    "emptySlot": "Empty slot",
+    "nextBadgeSlotIn": "Next badge slot in {{time}}"
+  },
+  "menu": {
+    "title": "A lonely green slime",
+    "start": "Start",
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "en": "EN",
+    "ko": "KO",
+    "resumeCountdown": "Resume countdown",
+    "resumeNormal": "3.. 2.. 1..",
+    "resumeFast": "3,2,1",
+    "attackSound": "Attack sound",
+    "attackSound1": "1",
+    "attackSound2": "2",
+    "attackSound3": "3",
+    "close": "Settings saved"
+  },
+  "overlay": {
+    "gameOver": "Game Over",
+    "clear": "Clear!!",
+    "scoreLabel": "Score:",
+    "clearBonus": "×1.5 BONUS!",
+    "enterNickname": "Enter nickname and submit your score.",
+    "nicknamePlaceholder": "Nickname (3–32 chars)",
+    "topPlayers": "Top Players",
+    "recentPrefix": "Recent",
+    "noScoresYet": "No scores submitted yet.",
+    "leaderboardFailed": "Failed to load leaderboard.",
+    "replaceConfirm": "Replace \"{{current}}\" with \"{{new}}\"?",
+    "feedbackSent": "Feedback sent.",
+    "period7d": "7 days",
+    "period30d": "30 days",
+    "period1y": "1 year",
+    "feedbackLabel": "Feedback",
+    "feedbackModalHeader": "Please share any inconveniences, suggestions, or reviews. Your feedback helps improve the game.",
+    "feedbackPlaceholder": "Your feedback..",
+    "feedbackClose": "Close",
+    "feedbackSend": "Send"
+  },
+  "upgrade": {
+    "title": "Picked up!",
+    "chooseUpgrade": "Choose an upgrade.",
+    "chooseWhatYouWant": "Choose what you want.",
+    "pickedUp": "Picked up",
+    "badgeReplace": "Badge Replace",
+    "cellsPlus1": "Cells +1",
+    "attackUp": "Attack Up",
+    "hpPlus2": "HP +2",
+    "rollingBadge": "Rolling badge...",
+    "newFragmentAppeared": "A new fragment has appeared!",
+    "spinOnceMore": "Spin the pachinko once more.",
+    "scorePlus": "Score +{{value}}",
+    "badgeSlotsPlus1": "It's been 5 minutes. Badge slots +1",
+    "clickToEquip": "Click to equip",
+    "openAfter": "Open after {{time}}",
+    "alreadyEquippedDud": "This badge is already equipped.. (So… yeah, it's a dud.)"
+  },
+  "pause": {
+    "paused": "Paused",
+    "pressEscToResume": "Press ESC to resume",
+    "toMain": "To Main",
+    "quitGame": "End Game",
+    "confirmToMain": "Abandon current progress and go to main menu?",
+    "confirmQuit": "Register your final score now?"
+  },
+  "rarity": {
+    "normal": "Normal",
+    "epic": "Epic",
+    "unique": "Unique"
+  },
+  "badge": {
+    "rarityBadge": "{{rarity}} Badge",
+    "chain_attack": {
+      "name": "Chain Attack",
+      "description": "When a cell hits an enemy, it **chains** to another nearby enemy then returns to orbit."
+    },
+    "i_am_legend": {
+      "name": "I Am Legend",
+      "description": "Spawn **1.5×** more monsters on the field."
+    },
+    "fragment_collector": {
+      "name": "Fragment Collector",
+      "description": "Fragment chest spawn rate increases by about **30%**."
+    },
+    "give_me_more_plus": {
+      "name": "Give Me More+",
+      "description": "Coins dropped by monsters grant **2×** score. (Stacks with badges of the same effect.)"
+    },
+    "give_me_more": {
+      "name": "Give Me More",
+      "description": "Coins dropped by monsters grant **1.5×** score. (Stacks with badges of the same effect.)"
+    },
+    "regen": {
+      "name": "Regen",
+      "description": "Heal **+1** HP every 60 seconds, but taking damage adds **+1** damage."
+    },
+    "one_more": {
+      "name": "One More",
+      "description": "You can **spin the badge draw one more time**."
+    },
+    "cell_limit_plus": {
+      "name": "Extra Cells+",
+      "description": "Max cell limit **+2**. (Stacks with badges of the same effect.)"
+    },
+    "blood_hungry": {
+      "name": "Blood Hungry",
+      "description": "Restore **+1** HP every 300 kills; taking damage adds **+1** damage."
+    },
+    "shooter_hunter": {
+      "name": "Shooter Hunter",
+      "description": "Cells **prioritize Shooter** enemies."
+    },
+    "runner": {
+      "name": "Runner",
+      "description": "Increases your **movement speed**."
+    },
+    "extra_heart_limit_plus": {
+      "name": "Extra Heart Limit+",
+      "description": "Max HP limit **+4**. (Stacks with badges of the same effect.)"
+    },
+    "critical": {
+      "name": "Critical",
+      "description": "**20%** chance to deal double damage."
+    },
+    "smaller_plus": {
+      "name": "Smaller+",
+      "description": "Character becomes **even** smaller. (Stacks with badges of the same effect.)"
+    },
+    "cell_limit": {
+      "name": "Extra Cells",
+      "description": "Max cell limit **+1**. (Stacks with badges of the same effect.)"
+    },
+    "additional_heart_limit": {
+      "name": "Extra Heart Limit",
+      "description": "Max HP limit **+2**."
+    },
+    "extra_fragments": {
+      "name": "Extra Fragments",
+      "description": "Max fragment chests on field **+1**."
+    },
+    "smaller": {
+      "name": "Smaller",
+      "description": "Character becomes **slightly** smaller."
+    },
+    "magnetic": {
+      "name": "Magnetic",
+      "description": "**Coins** are pulled toward you."
+    },
+    "compass": {
+      "name": "Compass",
+      "description": "Arrow points to a fragment chest **location**."
+    }
+  }
+}

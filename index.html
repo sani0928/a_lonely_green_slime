@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A lonely green slime</title>
+    <link rel="apple-touch-icon" sizes="57x57" href="assets/favicons/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="assets/favicons/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="assets/favicons/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="assets/favicons/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="assets/favicons/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="assets/favicons/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="assets/favicons/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="assets/favicons/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicons/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192"  href="assets/favicons/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="assets/favicons/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicons/favicon-16x16.png">
+    <link rel="manifest" href="assets/favicons/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="assets/favicons/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="stylesheet" href="assets/css/main.css" />
+  </head>
+  <body>
+    <div id="game-container"></div>
+    <div id="overlay">
+      <div class="overlay-panel">
+        <h2 class="overlay-title">Game Over</h2>
+        <p class="overlay-score">
+          Score:
+          <span id="overlay-score-text">0</span>
+          <span
+            class="overlay-score-multiplier"
+            id="overlay-score-multiplier"
+          ></span>
+        </p>
+
+        <div class="field-label">Enter nickname and submit your score.</div>
+        <div class="field-row">
+          <input
+            id="nickname-input"
+            type="text"
+            maxlength="32"
+            placeholder="Nickname (3–32 chars)"
+            autocomplete="off"
+          />
+          <button id="submit-score-btn" class="primary-btn">Submit</button>
+        </div>
+
+        <div class="overlay-footer-buttons overlay-actions-top">
+          <button type="button" id="feedback-open-btn" class="secondary-btn">Feedback</button>
+          <button type="button" id="overlay-main-btn" class="secondary-btn">To Main</button>
+          <button id="restart-btn" class="secondary-btn">Restart</button>
+        </div>
+
+        <div class="overlay-footer">
+          <span id="status-text" class="status-text"></span>
+        </div>
+
+        <div class="leaderboard" id="leaderboard">
+          <h3 class="leaderboard-title">Top Players <span class="leaderboard-recent-label" id="leaderboard-recent-label"></span></h3>
+          <div class="leaderboard-period" id="leaderboard-period">
+            <button type="button" class="period-btn" data-period="7d">7 days</button>
+            <button type="button" class="period-btn active" data-period="30d">30 days</button>
+            <button type="button" class="period-btn" data-period="1y">1 year</button>
+          </div>
+          <div id="leaderboard-list" class="leaderboard-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="feedback-modal" class="feedback-modal" aria-hidden="true">
+      <div class="feedback-modal-backdrop"></div>
+      <div class="feedback-modal-panel">
+        <p class="feedback-modal-header" id="feedback-modal-header">플레이하면서 불편했던 점, 개선사항, 평가 등 편하게 적어주세요. 개발에 많은 도움이 됩니다.</p>
+        <textarea id="feedback-modal-text" class="feedback-modal-text" maxlength="500" rows="4" placeholder="Your feedback (optional)"></textarea>
+        <div class="feedback-modal-actions">
+          <button type="button" id="feedback-modal-close" class="secondary-btn">Close</button>
+          <button type="button" id="feedback-modal-submit" class="primary-btn">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="upgrade-overlay">
+      <div id="upgrade-overlay-stats-bar" class="upgrade-overlay-stats-bar" aria-hidden="true">
+        <span id="overlay-stats-hp" class="overlay-stats-item"></span>
+        <span id="overlay-stats-cells" class="overlay-stats-item"></span>
+        <span id="overlay-stats-attack" class="overlay-stats-item"></span>
+        <span id="overlay-stats-badges" class="overlay-stats-item"></span>
+      </div>
+      <div class="overlay-panel">
+        <h2 class="overlay-title">Upgrade</h2>
+        <p class="overlay-score">Choose an upgrade.</p>
+        <div id="upgrade-badge-slots"></div>
+        <div
+          id="upgrade-options"
+          class="field-row"
+          style="flex-wrap: wrap; justify-content: center"
+        ></div>
+        <p id="upgrade-description" class="field-label"></p>
+      </div>
+    </div>
+
+    <div id="pause-overlay">
+      <div class="pause-title">Paused</div>
+      <div class="pause-sub">Press ESC to resume</div>
+      <div id="pause-badge-slots"></div>
+      <div class="pause-buttons">
+        <button type="button" id="pause-btn-main" class="secondary-btn">To Main</button>
+        <button type="button" id="pause-btn-quit" class="secondary-btn">End Game</button>
+      </div>
+    </div>
+
+    <div id="pause-confirm">
+      <div class="confirm-panel">
+        <p id="pause-confirm-msg" class="confirm-msg"></p>
+        <div class="confirm-buttons">
+          <button type="button" id="pause-confirm-no" class="secondary-btn">No</button>
+          <button type="button" id="pause-confirm-yes" class="primary-btn">Yes</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-overlay">
+      <div class="overlay-panel">
+        <div class="field-label" id="settings-language-label">Language</div>
+        <div class="field-row settings-toggle-row">
+          <button type="button" id="settings-lang-en" class="settings-lang-btn" data-lang="en">EN</button>
+          <button type="button" id="settings-lang-ko" class="settings-lang-btn" data-lang="ko">KO</button>
+        </div>
+        <div class="field-label" id="settings-resume-countdown-label">Resume countdown</div>
+        <div class="field-row settings-toggle-row">
+          <button type="button" id="settings-resume-normal" class="settings-lang-btn" data-speed="normal">Normal</button>
+          <button type="button" id="settings-resume-fast" class="settings-lang-btn" data-speed="fast">Fast</button>
+        </div>
+        <div class="field-label" id="settings-attack-sound-label">Attack sound</div>
+        <div class="field-row settings-toggle-row">
+          <button type="button" id="settings-attack-sound-1" class="settings-lang-btn" data-sfx="1">1</button>
+          <button type="button" id="settings-attack-sound-2" class="settings-lang-btn" data-sfx="2">2</button>
+          <button type="button" id="settings-attack-sound-3" class="settings-lang-btn" data-sfx="3">3</button>
+        </div>
+        <div class="overlay-footer" style="margin-top:16px">
+          <button type="button" id="settings-close-btn" class="secondary-btn">Settings saved</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirm-replace">
+      <div class="confirm-panel">
+        <p id="confirm-replace-msg" class="confirm-msg"></p>
+        <div class="confirm-buttons">
+          <button type="button" id="confirm-replace-no" class="secondary-btn">No</button>
+          <button type="button" id="confirm-replace-yes" class="primary-btn">Yes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phaser 3 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+    <!-- Game code (ES modules) -->
+    <script type="module" src="src/main.js"></script>
+  </body>
+  </html>
+
