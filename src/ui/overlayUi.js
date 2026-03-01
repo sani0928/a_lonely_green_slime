@@ -36,6 +36,8 @@ export function setupOverlayCallbacks(phaserGame) {
   const feedbackModalClose = document.getElementById("feedback-modal-close");
   const feedbackModalHeader = document.getElementById("feedback-modal-header");
   let currentLeaderboardPeriod = "30d";
+  /** 게임 오버 오버레이에 표시한 최종 점수 — 제출 시 이 값을 사용해 화면·DB 불일치 방지 */
+  let lastGameOverScore = 0;
   const upgradeOverlay = document.getElementById("upgrade-overlay");
   const upgradeBadgeSlotsContainer = document.getElementById("upgrade-badge-slots");
   const upgradeOptionsContainer = document.getElementById("upgrade-options");
@@ -63,6 +65,33 @@ export function setupOverlayCallbacks(phaserGame) {
   const overlayStatsCells = document.getElementById("overlay-stats-cells");
   const overlayStatsAttack = document.getElementById("overlay-stats-attack");
   const overlayStatsBadges = document.getElementById("overlay-stats-badges");
+
+  // 게임 오버 시 닉네임 입력 시 WASD가 Phaser에 잡혀 입력되지 않는 문제: capture 단계에서 가로채서 input에 직접 삽입
+  const WASD_KEYS = new Set(["w", "a", "s", "d"]);
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (!overlay?.classList?.contains("visible") || !nicknameInput) return;
+      if (document.activeElement !== nicknameInput) return;
+      const key = e.key?.toLowerCase();
+      if (!WASD_KEYS.has(key) || e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const char = e.shiftKey ? key.toUpperCase() : key;
+      const maxLen = nicknameInput.getAttribute("maxlength");
+      const limit = maxLen ? parseInt(maxLen, 10) : 32;
+      const start = nicknameInput.selectionStart ?? nicknameInput.value.length;
+      const end = nicknameInput.selectionEnd ?? start;
+      const val = nicknameInput.value;
+      const newVal = val.slice(0, start) + char + val.slice(end);
+      if (newVal.length <= limit) {
+        nicknameInput.value = newVal;
+        const pos = start + 1;
+        nicknameInput.setSelectionRange(pos, pos);
+      }
+    },
+    true
+  );
 
   function refreshOverlayTextsInternal() {
     const overlayScoreP = overlay?.querySelector(".overlay-score");
@@ -219,6 +248,8 @@ export function setupOverlayCallbacks(phaserGame) {
     isClear = false,
     baseScore = null
   ) => {
+    lastGameOverScore = typeof score === "number" ? score : 0;
+
     if (overlayTitle) {
       overlayTitle.textContent = isClear ? t("overlay.clear") : t("overlay.gameOver");
       overlayTitle.classList.remove(
@@ -283,6 +314,7 @@ export function setupOverlayCallbacks(phaserGame) {
     nicknameInput.value = "";
     clearStatus();
     overlay.classList.add("visible");
+
     nicknameInput.focus();
     await refreshLeaderboard();
   };
@@ -338,12 +370,8 @@ export function setupOverlayCallbacks(phaserGame) {
       return;
     }
 
-    if (
-      e.key === "ArrowLeft" ||
-      e.key === "ArrowUp" ||
-      e.key === "ArrowRight" ||
-      e.key === "ArrowDown"
-    ) {
+    const navKeys = ["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", "a", "A", "w", "W", "d", "D", "s", "S"];
+    if (navKeys.includes(e.key)) {
       e.preventDefault();
       e.stopPropagation();
       confirmFocus = confirmFocus === "yes" ? "no" : "yes";
@@ -576,7 +604,11 @@ export function setupOverlayCallbacks(phaserGame) {
 
       switch (event.key) {
         case "ArrowLeft":
-        case "ArrowUp": {
+        case "ArrowUp":
+        case "w":
+        case "W":
+        case "a":
+        case "A": {
           event.preventDefault();
           let next = currentIndex;
           for (let i = 0; i < totalFocusables; i += 1) {
@@ -589,7 +621,11 @@ export function setupOverlayCallbacks(phaserGame) {
           break;
         }
         case "ArrowRight":
-        case "ArrowDown": {
+        case "ArrowDown":
+        case "s":
+        case "S":
+        case "d":
+        case "D": {
           event.preventDefault();
           let next = currentIndex;
           for (let i = 0; i < totalFocusables; i += 1) {
@@ -665,8 +701,7 @@ export function setupOverlayCallbacks(phaserGame) {
       setStatus(t("overlay.nicknameLengthError"), true);
       return;
     }
-    const scene = phaserGame.scene.keys.MainScene;
-    const score = scene ? scene.score : 0;
+    const score = lastGameOverScore;
 
     submitBtn.disabled = true;
     setStatus(t("overlay.submittingScore"));
