@@ -5,7 +5,7 @@ export const GAME_VERSION = "0.9.0";
 
 // --- 개발 모드 플래그 ---
 // true로 두면 밸런스 무시하고 테스트용 극단 값(HP/탄환/보물 상한 99, 10킬마다 보물 등)을 사용한다.
-export const DEV_MODE = true;
+export const DEV_MODE = false;
 export const DEV_MAX_CAP = 20;
 export const DEV_CHEST_KILL_INTERVAL = 10;
 
