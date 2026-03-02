@@ -56,7 +56,15 @@ function pickSpawnType(scene) {
   const t = scene.elapsedTime || 0;
   const strength = getPlayerStrength(scene); // 0.0 ~ 1.0
 
-  const tNorm = Phaser.Math.Clamp(t / 900, 0, 1); // 0~15분 기준
+  let tNorm;
+  if (t <= 600) {
+    tNorm = Phaser.Math.Clamp(t / 900, 0, 1);
+  } else if (t <= 900) {
+    tNorm = 2 / 3 + ((t - 600) / 300) * 0.2;
+  } else {
+    tNorm = 0.8666666667 + ((t - 900) / 300) * 0.1333333333;
+  }
+  tNorm = Phaser.Math.Clamp(tNorm, 0, 1);
   const mix = Phaser.Math.Clamp(0.5 * tNorm + 0.5 * strength, 0, 1);
 
   // 필드에 존재 가능한 shooter 최대 수: 초반 1~2 → 후반 5~6
@@ -70,8 +78,8 @@ function pickSpawnType(scene) {
 
   if (shootersNow < maxShooters) {
     const baseChance = 0.08;
-    const extra = 0.42 * mix; // 후반/강할수록 원거리 비율 증가
-    const shooterChance = Phaser.Math.Clamp(baseChance + extra, 0.05, 0.6);
+    const extra = 0.34 * mix; // 후반/강할수록 원거리 비율 증가(상승 폭 완화)
+    const shooterChance = Phaser.Math.Clamp(baseChance + extra, 0.05, 0.45);
 
     if (Math.random() < shooterChance) {
       enemyType = "shooter";
@@ -116,6 +124,11 @@ function fireRangedShot(scene, enemy, player) {
   proj.setCircle(3);
   // shooter(ARCHER)의 본체 색상과 비슷한 노란색 틴트
   proj.setTint(0xf5dc46);
+
+   // 자신을 쏜 슈터와의 즉시 충돌은 무시하기 위해 출처 enemy 를 기록
+   if (proj.setData) {
+     proj.setData("sourceEnemy", enemy);
+   }
 
   // 일시정지 상태에서도 수명이 흐르지 않도록,
   // expiring 은 GameScene.update에서 elapsedTime 기준으로 처리한다.
@@ -266,33 +279,22 @@ export function spawnEnemy(scene) {
     } else {
       applyTierVisuals(enemy, enemyType);
     }
-
-    let behavior = "chase";
-    const roll = Phaser.Math.FloatBetween(0, 1);
+    let behavior;
     if (enemyType === "shooter") {
-      behavior = "ranged";
+      behavior = "shooter_behavior";
       enemy.setData("nextShotAt", (scene.elapsedTime || 0) + 1.4);
       // 플레이어 주변 원 위에서 흩어지기 위한 목표 각도 (스폰 시 랜덤 부여)
       enemy.setData("preferredAngle", Math.random() * Math.PI * 2);
-    } else if (roll < 0.4) {
-      behavior = "surround";
-    } else if (roll < 0.7) {
-      behavior = "chase";
-    } else if (roll < 0.9) {
-      behavior = "strafe";
     } else {
-      behavior = "zigzag";
+      behavior = "monsters_behavior";
+      const baseAggro = 260;
+      const variance = 40;
+      const aggroRadius = baseAggro + Phaser.Math.Between(-variance, variance);
+      enemy.setData("monsters_behaviorRoamAngle", Math.random() * Math.PI * 2);
+      enemy.setData("monsters_behaviorAggro", false);
+      enemy.setData("monsters_behaviorAggroRadius", aggroRadius);
     }
     enemy.setData("behavior", behavior);
-
-    if (behavior === "surround") {
-      enemy.setData("surroundDir", Phaser.Math.Between(0, 1) === 0 ? -1 : 1);
-      enemy.setData("surroundRadius", 85 + Phaser.Math.Between(0, 35));
-    } else if (behavior === "strafe") {
-      enemy.setData("strafeDir", Phaser.Math.Between(0, 1) === 0 ? -1 : 1);
-    } else if (behavior === "zigzag") {
-      enemy.setData("zigzagPhase", Phaser.Math.FloatBetween(0, Math.PI * 2));
-    }
   }
 }
 
@@ -366,8 +368,12 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
     }
 
     const speed = enemy.getData("speed") || 60;
-    const behavior = enemy.getData("behavior") || "chase";
+    let speedScale = 1;
     const type = enemy.getData("type") || "grunt";
+    const behaviorRaw = enemy.getData("behavior");
+    const behavior =
+      behaviorRaw ||
+      (type === "shooter" ? "shooter_behavior" : "monsters_behavior");
 
     const baseAngle = Phaser.Math.Angle.Between(
       enemy.x,
@@ -380,7 +386,7 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
     let dirX;
     let dirY;
 
-    if (behavior === "ranged" && type === "shooter") {
+    if (behavior === "shooter_behavior" && type === "shooter") {
       const dist = Phaser.Math.Distance.Between(
         enemy.x,
         enemy.y,
@@ -415,71 +421,51 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
         fireRangedShot(scene, enemy, player);
         const difficulty = scene.enemyDifficultyFactor || 1;
         const baseCd = 2.4;
-        const minCd = 0.9;
+        const minCd = 1.1;
         const cd = Math.max(minCd, baseCd - 0.12 * (difficulty - 1));
         enemy.setData("nextShotAt", now + cd);
       }
-    } else if (behavior === "surround") {
-      // 플레이어 주변 목표 반경에서 접선(옆) 이동으로 감싸기 (Cells 게임 스타일)
-      const dist = Phaser.Math.Distance.Between(
-        enemy.x,
-        enemy.y,
-        player.x,
-        player.y
-      );
-      const targetRadius = enemy.getData("surroundRadius") ?? 100;
-      const tangentWeight = 1.4;
-      const radialWeight = 0.9;
-      const toPlayerX = Math.cos(baseAngle);
-      const toPlayerY = Math.sin(baseAngle);
-      const tangentX = -toPlayerY;
-      const tangentY = toPlayerX;
-      const surroundDir = enemy.getData("surroundDir") ?? 1;
-
-      let radialX = 0;
-      let radialY = 0;
-      if (dist < targetRadius * 0.75) {
-        radialX = toPlayerX;
-        radialY = toPlayerY;
-      } else if (dist > targetRadius * 1.25) {
-        radialX = -toPlayerX;
-        radialY = -toPlayerY;
-      }
-
-      let dx = tangentX * surroundDir * tangentWeight + radialX * radialWeight;
-      let dy = tangentY * surroundDir * tangentWeight + radialY * radialWeight;
-      const len = Math.sqrt(dx * dx + dy * dy) || 1;
-      dirX = dx / len;
-      dirY = dy / len;
-    } else if (behavior === "strafe") {
-      // 플레이어를 중심으로 원을 그리듯이 접근
-      const dir = enemy.getData("strafeDir") || 1;
-      const offsetAngle = baseAngle + dir * Phaser.Math.DegToRad(40);
-      dirX = Math.cos(offsetAngle);
-      dirY = Math.sin(offsetAngle);
-    } else if (behavior === "zigzag") {
-      // 지그재그: 기본 진행 방향 + 수직 방향으로 진동
-      const phase = enemy.getData("zigzagPhase") || 0;
-      const t = scene.elapsedTime;
-
-      const forwardX = Math.cos(baseAngle);
-      const forwardY = Math.sin(baseAngle);
-      const perpX = -forwardY;
-      const perpY = forwardX;
-
-      const amp = 0.7; // 지그재그 폭
-      const freq = 4; // 지그재그 속도
-      const wave = Math.sin(t * freq + phase) * amp;
-
-      let dx = forwardX + perpX * wave;
-      let dy = forwardY + perpY * wave;
-      const len = Math.sqrt(dx * dx + dy * dy) || 1;
-      dirX = dx / len;
-      dirY = dy / len;
     } else {
-      // 기본: 단순 추적
-      dirX = Math.cos(baseAngle);
-      dirY = Math.sin(baseAngle);
+      if (behavior === "monsters_behavior") {
+        const distToPlayer = Phaser.Math.Distance.Between(
+          enemy.x,
+          enemy.y,
+          player.x,
+          player.y
+        );
+        const aggroRadius = enemy.getData("monsters_behaviorAggroRadius") || 260;
+        let monsters_behaviorAggro = enemy.getData("monsters_behaviorAggro");
+
+        if (!monsters_behaviorAggro && distToPlayer <= aggroRadius) {
+          monsters_behaviorAggro = true;
+          enemy.setData("monsters_behaviorAggro", true);
+        }
+
+        if (monsters_behaviorAggro) {
+          // aggro 상태: 플레이어를 향해 직선 추적
+          dirX = Math.cos(baseAngle);
+          dirY = Math.sin(baseAngle);
+        } else {
+          // 평시 로밍: 천천히 방향이 변하는 랜덤 배회
+          let roamAngle = enemy.getData("monsters_behaviorRoamAngle");
+          if (typeof roamAngle !== "number") {
+            roamAngle = Math.random() * Math.PI * 2;
+          }
+          const jitter = Phaser.Math.FloatBetween(-0.08, 0.08);
+          roamAngle += jitter;
+          enemy.setData("monsters_behaviorRoamAngle", roamAngle);
+
+          dirX = Math.cos(roamAngle);
+          dirY = Math.sin(roamAngle);
+
+          // 로밍 시에는 체감 속도를 낮춰 난이도 완화
+          speedScale = 0.55;
+        }
+      } else {
+        // 예외 상황 fallback: 단순 추적
+        dirX = Math.cos(baseAngle);
+        dirY = Math.sin(baseAngle);
+      }
     }
 
     // --- 집단 행동: 주변 적과의 간격을 벌려 큰 무리 뭉침 완화 (separation, 그리드 기반 O(n×k)) ---
@@ -557,8 +543,9 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
       }
     }
 
-    const vx = finalDirX * speed;
-    const vy = finalDirY * speed;
+    const effectiveSpeed = speed * speedScale;
+    const vx = finalDirX * effectiveSpeed;
+    const vy = finalDirY * effectiveSpeed;
 
     enemy.setVelocity(vx, vy);
 
@@ -583,6 +570,54 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
       }
     }
   }
+}
+
+export function onEnemyHitByEnemyProjectile(scene, enemy, proj) {
+  if (!scene || !enemy || !proj) return;
+  if (!enemy.active || !proj.active) return;
+
+  // 자신의 탄(발사한 슈터 본인)과의 충돌은 무시
+  if (proj.getData && proj.getData("sourceEnemy") === enemy) {
+    return;
+  }
+
+  // 발사체는 한 번 충돌 후 바로 제거
+  if (proj.destroy) {
+    proj.destroy();
+  }
+
+  // 적이 이미 넉백 중이면 추가 넉백은 무시(난이도 과도 상승 방지)
+  const now = scene.elapsedTime || 0;
+  const existingUntil = enemy.getData("knockbackUntil") || 0;
+  if (now < existingUntil) return;
+
+  let dirX = 0;
+  let dirY = 0;
+
+  // 가능하면 발사체의 속도 방향을 기준으로 넉백 방향을 정한다.
+  const body = proj.body;
+  if (body && typeof body.velocity === "object") {
+    const vx = body.velocity.x || 0;
+    const vy = body.velocity.y || 0;
+    const len = Math.sqrt(vx * vx + vy * vy) || 1;
+    dirX = vx / len;
+    dirY = vy / len;
+  } else {
+    // fallback: 발사체 위치 → 적 위치 방향
+    const dx = enemy.x - proj.x;
+    const dy = enemy.y - proj.y;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    dirX = dx / len;
+    dirY = dy / len;
+  }
+
+  // 체력은 줄이지 않고, 짧은 넉백만 적용
+  const kbSpeed = 140;
+  const duration = 0.12;
+  enemy.setData("knockbackDirX", dirX);
+  enemy.setData("knockbackDirY", dirY);
+  enemy.setData("knockbackSpeed", kbSpeed);
+  enemy.setData("knockbackUntil", now + duration);
 }
 
 export function applyDamage(scene, enemy, damage, isCritical = false) {
@@ -656,4 +691,3 @@ export function updateEnemyProjectilesExpiry(scene, now) {
     }
   });
 }
-

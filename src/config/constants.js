@@ -42,7 +42,7 @@ export const ENEMY_SPEED_FACTOR_MAX = 1.5;
 /** 적 속도 배율이 상한에 수렴하는 시간 상수(초) */
 export const ENEMY_SPEED_RAMP_SEC = 420;
 /** 적 체력/추가 스폰 수용 난이도: 1 + t / ENEMY_DIFFICULTY_TIME_SCALE */
-export const ENEMY_DIFFICULTY_TIME_SCALE = 60;
+export const ENEMY_DIFFICULTY_TIME_SCALE = 75;
 export const INITIAL_SPAWN_DELAY_MS = 650;
 export const MIN_SPAWN_DELAY_MS = 380;
 /** 플레이어가 매우 강할 때(탄환/공격력 상한 근접) 압박 유지용 최소 스폰 간격 */
@@ -58,7 +58,7 @@ export const EXTRA_ENEMIES_CAP_STRONG = 6;
 /** 필드에 동시 존재 가능한 적 상한 (초반, 렉 방지) */
 export const MAX_ACTIVE_ENEMIES_BASE = 300;
 /** 후반(30분 근처)까지 올라가는 적 상한 (난이도 곡선용) */
-export const MAX_ACTIVE_ENEMIES_LATE = 600;
+export const MAX_ACTIVE_ENEMIES_LATE = 700;
 /** 적 상한이 BASE→LATE로 올라가기 시작하는 시간(초). 이전까지는 BASE 유지 */
 export const ENEMY_CAP_RAMP_START_SEC = 360;
 /** 적 상한이 LATE에 도달하는 시간(초). 이후에는 LATE 유지 */
@@ -67,7 +67,7 @@ export const ENEMY_CAP_RAMP_END_SEC = 24 * 60;
 export const ENEMY_CULL_DISTANCE = 1800;
 export const ENEMY_SPAWN_MARGIN = 80;
 export const ENEMY_BASE_HP = 48;
-export const ENEMY_HP_PER_DIFFICULTY = 20;
+export const ENEMY_HP_PER_DIFFICULTY = 14;
 
 // 30분(고수 기준 최대 플레이) 밸런스: weak/mid/strong 각 2종, 다양성·타수 조절
 export const ENEMY_TYPES = {
@@ -132,4 +132,3 @@ export const ITEM_SPAWN_MARGIN = 120;
 
 export const DAMAGE_INVINCIBLE_DURATION_MS = 1500;
 export const GAME_TIME_LIMIT_SEC = 30 * 60;
-

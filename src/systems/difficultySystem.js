@@ -16,6 +16,7 @@ import {
   MAX_ACTIVE_ENEMIES_LATE,
   ENEMY_CAP_RAMP_START_SEC,
   ENEMY_CAP_RAMP_END_SEC,
+  GAME_TIME_LIMIT_SEC,
 } from "../config/constants.js";
 
 // 플레이어/적 공통 난이도 스케일링 및 티어 계산 로직
@@ -79,20 +80,56 @@ export function updateDifficultyScaling(scene) {
   const ramp = PLAYER_SPEED_RAMP_SEC ?? 500;
   scene.playerSpeed = base + (cap - base) * (1 - Math.exp(-t / ramp));
 
-  // 스폰 딜레이: 플레이어 강함 기반. 후반(10분~)에는 추가로 단축해 상한 증가분을 빠르게 채움
-  const strength = getPlayerStrength(scene);
-  let minDelay = isStrongPlayer(scene)
-    ? MIN_SPAWN_DELAY_MS_STRONG
-    : MIN_SPAWN_DELAY_MS;
-  if (t >= LATE_SPAWN_DELAY_START_SEC && MIN_SPAWN_DELAY_MS_LATE != null) {
+  // 스폰 딜레이: 시간 기반(log 형태)으로만 감소.
+  // 초반에는 완만하게 줄어들다가, 후반으로 갈수록 더 빠르게 줄어들도록 설계.
+  const elapsed = Math.max(0, t || 0);
+  const maxDelay = INITIAL_SPAWN_DELAY_MS;
+  let minDelay = MIN_SPAWN_DELAY_MS;
+  const strongPlayer = isStrongPlayer(scene);
+
+  if (strongPlayer && MIN_SPAWN_DELAY_MS_STRONG != null) {
+    minDelay = Math.min(minDelay, MIN_SPAWN_DELAY_MS_STRONG);
+  }
+  // 10분 이후에는 기존과 같이 후반 압박용 최소 딜레이를 더 낮게 허용
+  if (
+    elapsed >= LATE_SPAWN_DELAY_START_SEC &&
+    MIN_SPAWN_DELAY_MS_LATE != null
+  ) {
     minDelay = Math.min(minDelay, MIN_SPAWN_DELAY_MS_LATE);
   }
-  const newDelay = Phaser.Math.Clamp(
-    INITIAL_SPAWN_DELAY_MS -
-      (INITIAL_SPAWN_DELAY_MS - minDelay) * strength,
+
+  // 전체 게임 시간(30분)을 기준으로 0~1 진행도 계산
+  const horizon = GAME_TIME_LIMIT_SEC || 1800;
+  const maxProgress = 0.95;
+  const clampedT = Math.min(elapsed, horizon * maxProgress);
+  const u = clampedT / horizon; // 0 ~ maxProgress
+
+  // log(1 / (1 - u)) 형태의 곡선: 초반에는 완만, 후반(진행도 1에 가까울수록) 급격하게 증가
+  const safeU = Math.min(Math.max(u, 0), maxProgress - 1e-6);
+  const numer = Math.log(1 / (1 - safeU));
+  const denom = Math.log(1 / (1 - maxProgress));
+  const timeFactor = denom > 0 ? numer / denom : 0; // 0 ~ 1
+
+  let newDelay = Phaser.Math.Clamp(
+    maxDelay - (maxDelay - minDelay) * timeFactor,
     minDelay,
-    INITIAL_SPAWN_DELAY_MS
+    maxDelay
   );
+
+  if (
+    strongPlayer &&
+    elapsed >= LATE_SPAWN_DELAY_START_SEC &&
+    SPAWN_DELAY_DECREASE_PER_SECOND > 0
+  ) {
+    const extraSec = elapsed - LATE_SPAWN_DELAY_START_SEC;
+    const extraReduction = extraSec * SPAWN_DELAY_DECREASE_PER_SECOND;
+    newDelay = Phaser.Math.Clamp(
+      newDelay - extraReduction,
+      minDelay,
+      maxDelay
+    );
+  }
+
   scene.spawnEvent.delay = newDelay;
 }
 
