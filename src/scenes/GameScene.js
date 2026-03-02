@@ -4,6 +4,7 @@ import {
   PLAYER_BASE_HP,
   PLAYER_BASE_SPEED,
   PLAYER_BASE_ATTACK,
+  PLAYER_MAX_HP_CAP,
   ENEMY_BASE_SPEED_MIN,
   ENEMY_BASE_SPEED_MAX,
   INITIAL_SPAWN_DELAY_MS,
@@ -68,8 +69,8 @@ export default class GameScene extends Phaser.Scene {
 
     this.score = 0;
     this.killCount = 0;
-    this.playerMaxHp = DEV_MODE ? DEV_MAX_CAP : PLAYER_BASE_HP;
-    this.playerHp = this.playerMaxHp;
+    this.playerMaxHp = DEV_MODE ? DEV_MAX_CAP : PLAYER_MAX_HP_CAP;
+    this.playerHp = DEV_MODE ? this.playerMaxHp : PLAYER_BASE_HP;
     this.playerAttackPower = PLAYER_BASE_ATTACK;
     this.isGameOver = false;
     this.elapsedTime = 0;
