@@ -60,11 +60,19 @@ export function handleMovement(scene) {
   }
 }
 
-export function onPlayerHitByEnemy(scene, player, enemy) {
+export function onPlayerHitByEnemy(scene, player, enemy, hitMeta = null) {
+  if (scene.isGameOver) {
+    enemy.destroy();
+    return;
+  }
+  if (scene.isInvincible) {
+    enemy.destroy();
+    return;
+  }
+  if (typeof scene.recordPlayerHit === "function") {
+    scene.recordPlayerHit(hitMeta);
+  }
   enemy.destroy();
-
-  if (scene.isGameOver) return;
-  if (scene.isInvincible) return;
 
   // 기본 피격 데미지: 1. Blood Hungry +1(총 2). Regen +1(총 2). 둘 다 있으면 3. (Critical은 적 공격 데미지에 적용)
   let damage = 1;

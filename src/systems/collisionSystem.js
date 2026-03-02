@@ -12,12 +12,23 @@ export function registerCollisions(scene) {
   scene.physics.add.overlap(
     scene.player,
     scene.enemies,
-    (player, enemy) => PlayerSystem.onPlayerHitByEnemy(scene, player, enemy)
+    (player, enemy) =>
+      PlayerSystem.onPlayerHitByEnemy(scene, player, enemy, {
+        source: "contact",
+        isShooter: enemy?.getData?.("type") === "shooter",
+      })
   );
   scene.physics.add.overlap(
     scene.player,
     scene.enemyProjectiles,
-    (player, proj) => PlayerSystem.onPlayerHitByEnemy(scene, player, proj)
+    (player, proj) => {
+      const sourceEnemy = proj?.getData?.("sourceEnemy");
+      PlayerSystem.onPlayerHitByEnemy(scene, player, proj, {
+        source: "projectile",
+        isShooter:
+          sourceEnemy?.getData?.("type") === "shooter",
+      });
+    }
   );
   scene.physics.add.overlap(
     scene.enemyProjectiles,

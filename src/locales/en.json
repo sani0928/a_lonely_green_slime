@@ -30,7 +30,7 @@
     "guideGoal": "Goal\n• Survive as long as you can. Last 30 minutes to earn a score bonus.\n• Submit your final score to the leaderboard and share with other players.",
     "guideControls": "Controls\n• WASD or Arrow keys: Move\n• ESC: Pause and badge slots",
     "guideCombat": "Combat\n• Cells orbiting the slime auto-attack nearby enemies.\n• Defeated enemies drop coins → score.\n• Taking damage reduces HP; brief invincibility after hit.",
-    "guideGrowth": "Growth\n• Fragments: Appear on the map. Open them for upgrades or a badge draw.\n• Badges: Equip in empty slots or replace existing badges. Effects apply while equipped."
+    "guideGrowth": "Growth\n• Fragments: Dropped by defeated monsters. Use them for upgrades or badge draw.\n• Badges: Equip in empty slots or replace existing badges. Effects apply while equipped."
   },
   "settings": {
     "title": "Settings",

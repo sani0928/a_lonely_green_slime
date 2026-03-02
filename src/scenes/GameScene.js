@@ -34,6 +34,11 @@ import {
   getFrameIndex,
   getScaleForSize,
 } from "../render/entitySprites.js";
+import {
+  getOrCreateAnonymousId,
+  getNextRunId,
+  submitPlayLog,
+} from "../api/scoreApi.js";
 import { t } from "../i18n.js";
 
 export default class GameScene extends Phaser.Scene {
@@ -68,6 +73,54 @@ export default class GameScene extends Phaser.Scene {
     this.playerAttackPower = PLAYER_BASE_ATTACK;
     this.isGameOver = false;
     this.elapsedTime = 0;
+    this.playLogSent = false;
+    this.playLogStartedAt = new Date().toISOString();
+    this.playLogAnonymousId = getOrCreateAnonymousId();
+    this.playLogRunId = getNextRunId();
+    this.playLogStats = {
+      contactHits: 0,
+      projectileHits: 0,
+      shooterContactHits: 0,
+      shooterProjectileHits: 0,
+    };
+    this.playLogSnapshots = [];
+    this.playLogNextSnapshotAtSec = 60;
+    this.recordPlayerHit = (hitMeta) => {
+      if (!this.playLogStats) return;
+      const source =
+        hitMeta && typeof hitMeta.source === "string"
+          ? hitMeta.source
+          : "contact";
+      const isShooter = !!(hitMeta && hitMeta.isShooter);
+
+      if (source === "projectile") {
+        this.playLogStats.projectileHits += 1;
+        if (isShooter) this.playLogStats.shooterProjectileHits += 1;
+      } else {
+        this.playLogStats.contactHits += 1;
+        if (isShooter) this.playLogStats.shooterContactHits += 1;
+      }
+    };
+    this.capturePlaySnapshot = (snapshotSec = this.elapsedTime || 0) => {
+      const sec = Math.max(0, Math.floor(snapshotSec));
+      const minute = Math.floor(sec / 60);
+      const equippedBadges =
+        typeof BadgeSystem.getEquippedBadges === "function"
+          ? BadgeSystem.getEquippedBadges(this) || []
+          : [];
+      const badges = equippedBadges.filter((id) => typeof id === "string");
+
+      this.playLogSnapshots.push({
+        t_sec: sec,
+        minute,
+        hp: Math.max(0, Math.round(this.playerHp || 0)),
+        max_hp: Math.max(0, Math.round(this.playerMaxHp || 0)),
+        cells: Math.max(0, Math.round(this.cellActiveCount || 0)),
+        attack: Math.max(0, Math.round(this.playerAttackPower || 0)),
+        badges,
+        kills: Math.max(0, Math.round(this.killCount || 0)),
+      });
+    };
 
     this.worldWidth = WORLD_WIDTH;
     this.worldHeight = WORLD_HEIGHT;
@@ -284,6 +337,10 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.elapsedTime += dt;
+    while (this.elapsedTime >= this.playLogNextSnapshotAtSec) {
+      this.capturePlaySnapshot(this.playLogNextSnapshotAtSec);
+      this.playLogNextSnapshotAtSec += 60;
+    }
 
     // 남은 시간 갱신 및 표시 (30:00 → 00:00)
     if (typeof GAME_TIME_LIMIT_SEC === "number" && this.timerText) {
@@ -392,6 +449,25 @@ export default class GameScene extends Phaser.Scene {
     const finalScore = isClear ? Math.round(baseScore * 1.5) : baseScore;
     this.score = finalScore;
 
+    if (!this.playLogSent) {
+      this.playLogSent = true;
+      submitPlayLog({
+        anonymous_id: this.playLogAnonymousId,
+        run_id: this.playLogRunId,
+        started_at: this.playLogStartedAt,
+        ended_at: new Date().toISOString(),
+        play_seconds: Number((this.elapsedTime || 0).toFixed(2)),
+        contact_hits: this.playLogStats?.contactHits || 0,
+        projectile_hits: this.playLogStats?.projectileHits || 0,
+        shooter_contact_hits: this.playLogStats?.shooterContactHits || 0,
+        shooter_projectile_hits: this.playLogStats?.shooterProjectileHits || 0,
+        kills_total: this.killCount || 0,
+        final_score: finalScore,
+        is_clear: !!isClear,
+        snapshots: this.playLogSnapshots || [],
+      }).catch(() => {});
+    }
+
     if (this.player) {
       this.player.setVelocity(0, 0);
     }
@@ -412,4 +488,3 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 }
-

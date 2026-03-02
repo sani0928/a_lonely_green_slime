@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "scores",
     "feedback",
+    "playlogs",
 ]
 
 MIDDLEWARE = [
