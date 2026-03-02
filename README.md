@@ -1,4 +1,4 @@
-## [A lonely green slime](https://a-lonely-green-slime.vercel.app/)
+## [A lonely green slime](https://www.a-lonely-green-slime.com/)
 픽셀 세계에 홀로 남은 초록 슬라임. 끝없이 몰려오는 몬스터를 피하고, 세포로 막아 내며 기어코 살아남을 것이다.. 
 슬라임 조각과 뱃지를 모아 강해지고, 30분만 버티면 탈출할 수 있다!!
 
