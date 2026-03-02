@@ -7,6 +7,7 @@ import {
 import { t, getSfxAttackKey } from "../i18n.js";
 import { showSettingsOverlay } from "../ui/settingsOverlay.js";
 import { showGuideOverlay } from "../ui/guideOverlay.js";
+import { showNicknameOverlay } from "../ui/nicknameOverlay.js";
 
 const WANDER_SPEED = 28;
 const FLEE_SPEED = 160;
@@ -99,6 +100,7 @@ export default class MainMenuScene extends Phaser.Scene {
     this.load.audio("sfx_attack_1", "assets/audio/attack1.wav");
     this.load.audio("sfx_attack_2", "assets/audio/attack2.wav");
     this.load.audio("sfx_attack_3", "assets/audio/attack3.wav");
+    this.load.audio("sfx_play", "assets/audio/play.wav");
   }
 
   create() {
@@ -159,25 +161,14 @@ export default class MainMenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setDepth(3);
-    const startHit = this.add.zone(width / 2, startY + btnH / 2, btnW, btnH).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const startHit = this.add
+      .zone(width / 2, startY + btnH / 2, btnW, btnH)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
     this.startHit = startHit;
     startHit.on("pointerdown", () => {
-      const cam = this.cameras.main;
-      const w = cam.width;
-      const h = cam.height;
-      const curtain = this.add.graphics().setScrollFactor(0).setDepth(1000);
-      curtain.fillStyle(0x000000, 1);
-      curtain.fillRect(0, 0, w, h);
-      curtain.setAlpha(0);
-      this.tweens.add({
-        targets: curtain,
-        alpha: 1,
-        duration: 350,
-        ease: "Power2.Out",
-        onComplete: () => {
-          this.scene.start("MainScene");
-        },
-      });
+      // 게임 시작 전 닉네임 오버레이를 먼저 연다.
+      showNicknameOverlay(this);
     });
     startHit.on("pointerover", () => {
       startBg.clear();
@@ -531,12 +522,27 @@ export default class MainMenuScene extends Phaser.Scene {
   /** DOM 오버레이가 닫힐 때 호출 — 메뉴 버튼·몬스터 클릭 다시 활성화 + 호버 상태 초기화 */
   enableMenuButtons() {
     const opt = { useHandCursor: true };
-    this.startHit?.setInteractive(opt);
-    this.setHit?.setInteractive(opt);
-    this.guideHit?.setInteractive(opt);
+
+    const safeSetInteractive = (obj) => {
+      // 씬이 이미 정리된 경우(setInteractive 내부에서 scene.sys 접근 중 오류) 방지
+      if (obj && obj.scene && obj.scene.sys && obj.scene.sys.input) {
+        obj.setInteractive(opt);
+      }
+    };
+
+    safeSetInteractive(this.startHit);
+    safeSetInteractive(this.setHit);
+    safeSetInteractive(this.guideHit);
+
     if (this.paradeSprites) {
       this.paradeSprites.forEach((s) => {
-        if (s.active && s.getData("entityIndex") !== PLAYER_ENTITY_INDEX) {
+        if (
+          s.active &&
+          s.getData("entityIndex") !== PLAYER_ENTITY_INDEX &&
+          s.scene &&
+          s.scene.sys &&
+          s.scene.sys.input
+        ) {
           s.setInteractive(opt);
         }
       });

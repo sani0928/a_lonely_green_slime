@@ -4,6 +4,7 @@ import { renderBadgeSlots } from "./badgeSlotsUi.js";
 import { BADGES } from "../badges/badgeDefinitions.js";
 import { t, formatBold } from "../i18n.js";
 import { getDashboardStatsForOverlay } from "../systems/hudSystem.js";
+import { getNicknameForSubmit } from "./nicknameOverlay.js";
 
 let overlayTextsRefreshFn = null;
 
@@ -22,8 +23,7 @@ export function setupOverlayCallbacks(phaserGame) {
     : null;
   const scoreText = document.getElementById("overlay-score-text");
   const scoreMultiplier = document.getElementById("overlay-score-multiplier");
-  const nicknameInput = document.getElementById("nickname-input");
-  const submitBtn = document.getElementById("submit-score-btn");
+  const nicknameValue = document.getElementById("overlay-nickname-value");
   const statusText = document.getElementById("status-text");
   const overlayMainBtn = document.getElementById("overlay-main-btn");
   const restartBtn = document.getElementById("restart-btn");
@@ -66,40 +66,9 @@ export function setupOverlayCallbacks(phaserGame) {
   const overlayStatsAttack = document.getElementById("overlay-stats-attack");
   const overlayStatsBadges = document.getElementById("overlay-stats-badges");
 
-  // 게임 오버 시 닉네임 입력 시 WASD가 Phaser에 잡혀 입력되지 않는 문제: capture 단계에서 가로채서 input에 직접 삽입
-  const WASD_KEYS = new Set(["w", "a", "s", "d"]);
-  document.addEventListener(
-    "keydown",
-    (e) => {
-      if (!overlay?.classList?.contains("visible") || !nicknameInput) return;
-      if (document.activeElement !== nicknameInput) return;
-      const key = e.key?.toLowerCase();
-      if (!WASD_KEYS.has(key) || e.ctrlKey || e.metaKey || e.altKey) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const char = e.shiftKey ? key.toUpperCase() : key;
-      const maxLen = nicknameInput.getAttribute("maxlength");
-      const limit = maxLen ? parseInt(maxLen, 10) : 32;
-      const start = nicknameInput.selectionStart ?? nicknameInput.value.length;
-      const end = nicknameInput.selectionEnd ?? start;
-      const val = nicknameInput.value;
-      const newVal = val.slice(0, start) + char + val.slice(end);
-      if (newVal.length <= limit) {
-        nicknameInput.value = newVal;
-        const pos = start + 1;
-        nicknameInput.setSelectionRange(pos, pos);
-      }
-    },
-    true
-  );
-
   function refreshOverlayTextsInternal() {
     const overlayScoreP = overlay?.querySelector(".overlay-score");
     if (overlayScoreP?.firstChild) overlayScoreP.firstChild.nodeValue = t("overlay.scoreLabel") + " ";
-    const enterNicknameEl = overlay?.querySelector(".field-label");
-    if (enterNicknameEl) enterNicknameEl.textContent = t("overlay.enterNickname");
-    if (nicknameInput) nicknameInput.placeholder = t("overlay.nicknamePlaceholder");
-    if (submitBtn) submitBtn.textContent = t("common.submit");
     if (overlayMainBtn) overlayMainBtn.textContent = t("pause.toMain");
     if (restartBtn) restartBtn.textContent = t("common.restart");
     const topPlayersH3 = document.getElementById("leaderboard")?.querySelector("h3");
@@ -152,7 +121,7 @@ export function setupOverlayCallbacks(phaserGame) {
   async function refreshLeaderboard() {
     leaderboardList.innerHTML = "";
     try {
-      const items = await fetchLeaderboard(10, currentLeaderboardPeriod);
+      const items = await fetchLeaderboard(20, currentLeaderboardPeriod);
       if (!items || items.length === 0) {
         leaderboardList.innerHTML =
           '<div class="status-text">' + t("overlay.noScoresYet") + '</div>';
@@ -249,6 +218,13 @@ export function setupOverlayCallbacks(phaserGame) {
     baseScore = null
   ) => {
     lastGameOverScore = typeof score === "number" ? score : 0;
+    clearStatus();
+
+    const nicknameForSubmit =
+      typeof getNicknameForSubmit === "function" ? getNicknameForSubmit() : "";
+    if (nicknameValue) {
+      nicknameValue.textContent = nicknameForSubmit || "";
+    }
 
     if (overlayTitle) {
       overlayTitle.textContent = isClear ? t("overlay.clear") : t("overlay.gameOver");
@@ -311,12 +287,57 @@ export function setupOverlayCallbacks(phaserGame) {
       // Game Over 등 일반 케이스
       scoreText.textContent = String(score);
     }
-    nicknameInput.value = "";
-    clearStatus();
-    overlay.classList.add("visible");
 
-    nicknameInput.focus();
+    overlay.classList.add("visible");
     await refreshLeaderboard();
+
+    // 점수 자동 제출
+    try {
+      const submittingMsg = t("overlay.submittingScore");
+      if (nicknameValue) {
+        const baseName = nicknameForSubmit || "";
+        nicknameValue.textContent = baseName
+          ? `${baseName} / ${submittingMsg}`
+          : submittingMsg;
+      } else {
+        setStatus(submittingMsg);
+      }
+
+      const result = await submitScore(nicknameForSubmit, lastGameOverScore);
+
+      const submittedName =
+        (result && typeof result.nickname === "string" && result.nickname) ||
+        nicknameForSubmit ||
+        "";
+
+      let messageKey = "overlay.scoreSubmitted";
+      if (result && result.status === "created") {
+        messageKey = "overlay.scoreCreated";
+      } else if (result && result.status === "updated") {
+        messageKey = "overlay.scoreUpdated";
+      } else if (result && result.status === "kept") {
+        messageKey = "overlay.scoreKept";
+      }
+      const message = t(messageKey);
+
+      if (nicknameValue) {
+        nicknameValue.textContent = submittedName
+          ? `${submittedName}, ${message}`
+          : message;
+      }
+      clearStatus();
+      await refreshLeaderboard();
+    } catch (err) {
+      const errMsg = err.message || t("overlay.submitScoreFailed");
+      if (nicknameValue) {
+        const baseName = nicknameForSubmit || "";
+        nicknameValue.textContent = baseName
+          ? `${baseName} / ${errMsg}`
+          : errMsg;
+      } else {
+        setStatus(errMsg, true);
+      }
+    }
   };
 
   let confirmReplaceOnYes = null;
@@ -693,29 +714,6 @@ export function setupOverlayCallbacks(phaserGame) {
 
     upgradeOverlay.classList.add("visible");
   };
-
-  submitBtn.addEventListener("click", async () => {
-    clearStatus();
-    const nickname = nicknameInput.value.trim();
-    if (nickname.length < 3 || nickname.length > 32) {
-      setStatus(t("overlay.nicknameLengthError"), true);
-      return;
-    }
-    const score = lastGameOverScore;
-
-    submitBtn.disabled = true;
-    setStatus(t("overlay.submittingScore"));
-
-    try {
-      await submitScore(nickname, score);
-      setStatus(t("overlay.scoreSubmitted"));
-      await refreshLeaderboard();
-    } catch (err) {
-      setStatus(err.message || t("overlay.submitScoreFailed"), true);
-    } finally {
-      submitBtn.disabled = false;
-    }
-  });
 
   if (overlayMainBtn) {
     overlayMainBtn.addEventListener("click", () => {

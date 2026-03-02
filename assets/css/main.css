@@ -263,6 +263,42 @@ canvas {
   color: #ff8a80;
 }
 
+.nickname-overlay-panel .nickname-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.nickname-overlay-panel .nickname-overlay-error {
+  font-size: 12px;
+  max-width: 50%;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes nickname-input-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.nickname-input-shake {
+  animation: nickname-input-shake 0.18s ease-in-out;
+}
+
 /* === Leaderboard === */
 .leaderboard {
   margin-top: 16px;

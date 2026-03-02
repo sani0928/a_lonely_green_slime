@@ -23,7 +23,7 @@ export async function submitScore(nickname, score) {
   return response.json();
 }
 
-export async function fetchLeaderboard(limit = 10, period = "30d") {
+export async function fetchLeaderboard(limit = 20, period = "30d") {
   const params = new URLSearchParams({ limit: String(limit), period });
   const url = `${API_BASE_URL}/api/scores/?${params}`;
   const response = await fetch(url);

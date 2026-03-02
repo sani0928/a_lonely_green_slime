@@ -148,6 +148,20 @@ export function showGuideOverlay(scene) {
     overlay.querySelector(".guide-overlay-backdrop")?.addEventListener("click", closeOverlay);
     tabIntro?.addEventListener("click", () => switchTab("intro"));
     tabBadges?.addEventListener("click", () => switchTab("badges"));
+
+    // ESC 키로 가이드 오버레이 닫기 (오버레이가 열려 있을 때만 동작)
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key !== "Escape") return;
+        const ov = getOverlay();
+        if (!ov || !ov.classList.contains("visible")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        closeOverlay();
+      },
+      true
+    );
   }
 
   overlay.classList.add("visible");

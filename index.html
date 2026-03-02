@@ -21,8 +21,8 @@
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="assets/favicons/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
-    <!-- 버전: src/config/constants.js GAME_VERSION 과 맞춰 주세요 -->
-    <meta name="version" content="0.9.0" />
+    <!-- 버전: src/config/constants.js GAME_VERSION -->
+    <meta name="version" content="0.9.1" />
     <link rel="stylesheet" href="assets/css/main.css" />
   </head>
   <body>
@@ -39,16 +39,8 @@
           ></span>
         </p>
 
-        <div class="field-label">Enter nickname and submit your score.</div>
         <div class="field-row">
-          <input
-            id="nickname-input"
-            type="text"
-            maxlength="32"
-            placeholder="Nickname (3–32 chars)"
-            autocomplete="off"
-          />
-          <button id="submit-score-btn" class="primary-btn">Submit</button>
+          <span id="overlay-nickname-value" class="overlay-nickname-value"></span>
         </div>
 
         <div class="overlay-footer-buttons overlay-actions-top">
@@ -83,6 +75,39 @@
         <div class="feedback-modal-actions">
           <button type="button" id="feedback-modal-close" class="secondary-btn">Close</button>
           <button type="button" id="feedback-modal-submit" class="primary-btn">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="nickname-overlay" class="guide-overlay" aria-hidden="true">
+      <div class="nickname-overlay-backdrop guide-overlay-backdrop"></div>
+      <div class="overlay-panel nickname-overlay-panel">
+        <div class="nickname-overlay-header">
+          <h2 class="overlay-title" id="nickname-overlay-title">Nickname</h2>
+          <span
+            id="nickname-overlay-error"
+            class="status-text error nickname-overlay-error"
+          ></span>
+        </div>
+        <p class="field-label" id="nickname-overlay-description">
+          게임 종료 시 최종 점수가 자동으로 리더보드에 등록됩니다. 등록할 닉네임을
+          입력하거나, 그냥 Player로 플레이할 수 있습니다.
+        </p>
+        <div class="field-row">
+          <input
+            id="nickname-overlay-input"
+            type="text"
+            maxlength="32"
+            autocomplete="off"
+          />
+        </div>
+        <div class="overlay-footer">
+          <button type="button" id="nickname-overlay-cancel" class="secondary-btn">
+            Skip
+          </button>
+          <button type="button" id="nickname-overlay-confirm" class="primary-btn">
+            Submit
+          </button>
         </div>
       </div>
     </div>
