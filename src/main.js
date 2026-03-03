@@ -1,4 +1,4 @@
-/** Phaser 진입, 씬 등록, 로케일·오버레이 연동 */
+/** Phaser 吏꾩엯, ???깅줉, 濡쒖??셋룹삤踰꾨젅???곕룞 */
 import MainMenuScene from "./scenes/MainMenuScene.js";
 import GameScene from "./scenes/GameScene.js";
 import { setupOverlayCallbacks } from "./ui/overlayUi.js";
@@ -25,7 +25,8 @@ const config = {
 };
 
 window.addEventListener("load", async () => {
-  const locale = detectLocale();
+  const path = (typeof window !== "undefined" && window.location && window.location.pathname) || "/";
+  const locale = path.startsWith("/ko/") ? "ko" : detectLocale();
   await setLocale(locale);
   const game = new Phaser.Game(config);
   setupOverlayCallbacks(game);
