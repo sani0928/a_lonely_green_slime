@@ -54,7 +54,7 @@ export const ENEMY_CAP_RAMP_END_SEC = 24 * 60;
 export const ENEMY_CULL_DISTANCE = 2600;
 export const ENEMY_SPAWN_MARGIN = 80;
 export const ENEMY_BASE_HP = 48;
-export const ENEMY_HP_PER_DIFFICULTY = 9;
+export const ENEMY_HP_PER_DIFFICULTY = 11;
 
 // Enemy catalog
 export const ENEMY_TYPES = {
@@ -114,4 +114,4 @@ export const PHASE_AGGRO_RADIUS_MULTIPLIER = { 1: 1.0, 2: 1.3, 3: 1.3 };
 export const PHASE_AGGRO_CHASE_SPEED_MULTIPLIER = { 1: 1.0, 2: 1.0, 3: 1.2 };
 
 export const SHOOTER_CAP_STEP_SEC = 5 * 60;
-export const SHOOTER_SPAWN_INTERVAL_SEC = 20;
+export const SHOOTER_SPAWN_INTERVAL_SEC = 10;
