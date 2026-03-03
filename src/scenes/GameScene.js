@@ -14,9 +14,21 @@ import {
   CELL_BASE_ROTATION_SPEED,
   INITIAL_ITEM_KILL_THRESHOLD,
   DEV_MODE,
-  DEV_MAX_CAP,
   GAME_TIME_LIMIT_SEC,
+  PHASE2_START_SEC,
+  PHASE3_START_SEC,
   USE_PIXEL_SPRITES,
+  PHASE_GRID_TRANSITION_MS,
+  PHASE_GRID_COLOR_P1,
+  PHASE_GRID_COLOR_P2,
+  PHASE_GRID_COLOR_P3,
+  PHASE_GRID_MAJOR_ALPHA_BASE,
+  PHASE_GRID_MAJOR_ALPHA_AMPLITUDE,
+  PHASE_GRID_MAJOR_WAVE_SPEED_HZ,
+  PHASE_GRID_MAJOR_HIGHLIGHT_COLOR,
+  PHASE_GRID_MAJOR_WAVE_COLOR_BLEND,
+  PHASE_GRID_MAJOR_WIDTH_BASE,
+  PHASE_GRID_MAJOR_WIDTH_AMPLITUDE,
 } from "../config/constants.js";
 import { preloadGame } from "../loader/assetLoader.js";
 import * as PlayerSystem from "../systems/playerSystem.js";
@@ -54,8 +66,7 @@ export default class GameScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
     const cam = this.cameras.main;
-
-    // 메인 메뉴에서 전환 시 페이드 인
+    // Fade in when entering from the main menu.
     const fadeInCurtain = this.add.graphics().setScrollFactor(0).setDepth(10000);
     fadeInCurtain.fillStyle(0x000000, 1);
     fadeInCurtain.fillRect(0, 0, cam.width, cam.height);
@@ -69,8 +80,8 @@ export default class GameScene extends Phaser.Scene {
 
     this.score = 0;
     this.killCount = 0;
-    this.playerMaxHp = DEV_MODE ? DEV_MAX_CAP : PLAYER_MAX_HP_CAP;
-    this.playerHp = DEV_MODE ? this.playerMaxHp : PLAYER_BASE_HP;
+    this.playerMaxHp = PLAYER_MAX_HP_CAP;
+    this.playerHp = PLAYER_BASE_HP;
     this.playerAttackPower = PLAYER_BASE_ATTACK;
     this.isGameOver = false;
     this.elapsedTime = 0;
@@ -126,8 +137,23 @@ export default class GameScene extends Phaser.Scene {
     this.worldWidth = WORLD_WIDTH;
     this.worldHeight = WORLD_HEIGHT;
     this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
-
-    // 픽셀 코인 시트가 있을 경우, 코인 프레임 인덱스 맵 구성
+    this.bgFill = this.add
+      .rectangle(0, 0, this.worldWidth, this.worldHeight, 0x0c1218)
+      .setOrigin(0, 0)
+      .setDepth(-200);
+    this.bgGrid = this.add.graphics().setDepth(-190);
+    this.bgGridTransitionTween = null;
+    this.currentVisualPhase = DifficultySystem.getCurrentPhase(this);
+    this.currentGridColor = this.getGridColorForPhase(this.currentVisualPhase);
+    this.currentMajorGridWave = this.getMajorGridWaveState(this.currentGridColor);
+    this.bgGridWaveLastDrawAt = 0;
+    this.drawBackgroundGrid(
+      this.currentGridColor,
+      this.currentMajorGridWave.alpha,
+      this.currentMajorGridWave.color,
+      this.currentMajorGridWave.width
+    );
+    // Build coin frame indices when pixel coin sheet exists.
     this.coinFrames = null;
     if (USE_PIXEL_SPRITES) {
       const coinsMeta = this.cache.json.get("coins_manifest");
@@ -166,7 +192,7 @@ export default class GameScene extends Phaser.Scene {
 
     if (USE_PIXEL_SPRITES) {
       const entityIndex = getEntityIndexForPlayer();
-      const initialDirIndex = 4; // S (아래 방향)
+      const initialDirIndex = 4; // S (down)
 
       this.playerEntityIndex = entityIndex;
       this.lastPlayerDirIndex = initialDirIndex;
@@ -188,8 +214,7 @@ export default class GameScene extends Phaser.Scene {
     } else {
       this.playerBaseScale = 1;
     }
-
-    // Fragment 픽셀 애니메이션 정의
+    // Define fragment idle animation when sprite assets are available.
     if (
       USE_PIXEL_SPRITES &&
       this.anims &&
@@ -232,20 +257,19 @@ export default class GameScene extends Phaser.Scene {
     this.enemyDifficultyFactor = 1;
     this.enemySpeedFactor = 1;
 
-    this.cellBaseCount = DEV_MODE ? 5 : CELL_BASE_COUNT;
+    this.cellBaseCount = CELL_BASE_COUNT;
     this.cellMaxCount = CELL_MAX_COUNT;
     this.cellBaseRadius = CELL_BASE_RADIUS;
     this.cellAngle = 0;
     this.cellRotationSpeed = CELL_BASE_ROTATION_SPEED;
 
     this.nextItemKillThreshold = INITIAL_ITEM_KILL_THRESHOLD;
-    this.itemSpawnCount = 0; // 보물 스폰 횟수 (다음 보물까지 필요 킬을 증가시키는 데 사용)
+    this.itemSpawnCount = 0; // Number of spawned fragment chests, used for progressive kill thresholds.
     this.attackUpgradeCount = 0;
-
-    // 뱃지 슬롯 시스템: 기본 3개, 최대 8개 (5분마다 +1)
+    // Badge slots: start at 3, increase every 5 minutes, capped at 8.
     this.badgeSlotCount = 3;
     this.badgeSlotMax = 8;
-    this.nextBadgeSlotUnlockTime = 5 * 60; // 5분 후 첫 슬롯 해금
+    this.nextBadgeSlotUnlockTime = 5 * 60; // First slot unlock at 5 minutes.
 
     this.isPaused = false;
     this.isCountdownRunning = false;
@@ -260,7 +284,7 @@ export default class GameScene extends Phaser.Scene {
     PauseSystem.createPauseOverlay(this);
     CompassSystem.createCompass(this);
 
-    // 적 피격/사망 시 사용할 히트 파티클
+    // Hit effect particles for contact/projectile collisions.
     this.hitEmitter = this.add.particles(0, 0, "bullet", {
       speed: { min: 80, max: 180 },
       lifespan: 220,
@@ -285,8 +309,10 @@ export default class GameScene extends Phaser.Scene {
     HudSystem.updateDashboard(this);
 
     CollisionSystem.registerCollisions(this);
-
-    // ESC 키로 일시정지 토글 (프래그먼트/업그레이드 선택 중에도 가능)
+    if (DEV_MODE) {
+      this.setupDevDebugTools();
+    }
+    // Toggle pause with ESC (also available during upgrade selection).
     this.input.keyboard.on("keydown-ESC", () => {
       if (this.isGameOver) return;
       if (this.isCountdownRunning) return;
@@ -299,9 +325,9 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
-    // 브라우저 포커스/비가시 상태에 따른 일시정지 처리
+    // Auto-pause when the tab loses visibility or focus.
     if (this.game && this.game.events) {
-      // 탭이 숨겨지거나 포커스를 잃을 때 (프래그먼트/업그레이드 선택 중에도 일시정지)
+      // Pause when hidden or blurred (also while upgrade UI is open).
       this.game.events.on("hidden", () => {
         if (this.isGameOver) return;
         if (!this.isPaused && !this.isCountdownRunning) {
@@ -320,6 +346,225 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  getGridColorForPhase(phase) {
+    if (phase === 2) return PHASE_GRID_COLOR_P2;
+    if (phase === 3) return PHASE_GRID_COLOR_P3;
+    return PHASE_GRID_COLOR_P1;
+  }
+
+  blendColor(fromColor, toColor, t) {
+    const clamped = Phaser.Math.Clamp(t, 0, 1);
+    const fr = (fromColor >> 16) & 0xff;
+    const fg = (fromColor >> 8) & 0xff;
+    const fb = fromColor & 0xff;
+    const tr = (toColor >> 16) & 0xff;
+    const tg = (toColor >> 8) & 0xff;
+    const tb = toColor & 0xff;
+    const r = Math.round(fr + (tr - fr) * clamped);
+    const g = Math.round(fg + (tg - fg) * clamped);
+    const b = Math.round(fb + (tb - fb) * clamped);
+    return (r << 16) | (g << 8) | b;
+  }
+
+  getMajorGridWaveState(baseColor) {
+    const phase = DifficultySystem.getCurrentPhase(this);
+    const base = PHASE_GRID_MAJOR_ALPHA_BASE[phase] ?? 0.42;
+    const amp = PHASE_GRID_MAJOR_ALPHA_AMPLITUDE[phase] ?? 0.06;
+    const hz = PHASE_GRID_MAJOR_WAVE_SPEED_HZ[phase] ?? 0.22;
+    const highlightColor = PHASE_GRID_MAJOR_HIGHLIGHT_COLOR[phase] ?? 0xffffff;
+    const blendMax = PHASE_GRID_MAJOR_WAVE_COLOR_BLEND[phase] ?? 0.2;
+    const widthBase = PHASE_GRID_MAJOR_WIDTH_BASE[phase] ?? 2;
+    const widthAmp = PHASE_GRID_MAJOR_WIDTH_AMPLITUDE[phase] ?? 0.2;
+    const elapsed = typeof this.elapsedTime === "number" ? this.elapsedTime : 0;
+    const wave = Math.sin(elapsed * Math.PI * 2 * hz);
+    const wave01 = (wave + 1) * 0.5;
+    const alpha = Phaser.Math.Clamp(base + amp * wave, 0, 1);
+    const color = this.blendColor(baseColor, highlightColor, wave01 * blendMax);
+    const width = widthBase + widthAmp * wave01;
+    return { alpha, color, width };
+  }
+
+  drawBackgroundGrid(color, majorAlpha = 0.42, majorColor = color, majorWidth = 2) {
+    if (!this.bgGrid) return;
+    this.bgGrid.clear();
+    this.bgGrid.lineStyle(1, color, 0.28);
+
+    const majorSpacing = 256;
+    const minorSpacing = 64;
+
+    for (let x = 0; x <= this.worldWidth; x += minorSpacing) {
+      this.bgGrid.lineBetween(x, 0, x, this.worldHeight);
+    }
+    for (let y = 0; y <= this.worldHeight; y += minorSpacing) {
+      this.bgGrid.lineBetween(0, y, this.worldWidth, y);
+    }
+
+    this.bgGrid.lineStyle(majorWidth, majorColor, majorAlpha);
+    for (let x = 0; x <= this.worldWidth; x += majorSpacing) {
+      this.bgGrid.lineBetween(x, 0, x, this.worldHeight);
+    }
+    for (let y = 0; y <= this.worldHeight; y += majorSpacing) {
+      this.bgGrid.lineBetween(0, y, this.worldWidth, y);
+    }
+  }
+
+  updateVisualPhase() {
+    const nextPhase = DifficultySystem.getCurrentPhase(this);
+    if (nextPhase === this.currentVisualPhase) return;
+
+    const fromColor = this.currentGridColor;
+    const toColor = this.getGridColorForPhase(nextPhase);
+    this.currentVisualPhase = nextPhase;
+
+    if (nextPhase === 2) {
+      this.showPhaseAlert(t("phaseAlert.phase2"));
+    } else if (nextPhase === 3) {
+      this.showPhaseAlert(t("phaseAlert.phase3"));
+    }
+
+    if (this.bgGridTransitionTween) {
+      this.bgGridTransitionTween.stop();
+      this.bgGridTransitionTween = null;
+    }
+
+    this.bgGridTransitionTween = this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: PHASE_GRID_TRANSITION_MS,
+      ease: "Sine.easeInOut",
+      onUpdate: (tween) => {
+        const value = tween.getValue();
+        const color = this.blendColor(fromColor, toColor, value);
+        this.currentGridColor = color;
+        this.currentMajorGridWave = this.getMajorGridWaveState(color);
+        this.drawBackgroundGrid(
+          color,
+          this.currentMajorGridWave.alpha,
+          this.currentMajorGridWave.color,
+          this.currentMajorGridWave.width
+        );
+      },
+      onComplete: () => {
+        this.currentGridColor = toColor;
+        this.currentMajorGridWave = this.getMajorGridWaveState(toColor);
+        this.drawBackgroundGrid(
+          toColor,
+          this.currentMajorGridWave.alpha,
+          this.currentMajorGridWave.color,
+          this.currentMajorGridWave.width
+        );
+        this.bgGridTransitionTween = null;
+      },
+    });
+  }
+
+  showPhaseAlert(message) {
+    if (!message) return;
+    if (this.phaseAlertText && this.phaseAlertText.destroy) {
+      this.phaseAlertText.destroy();
+      this.phaseAlertText = null;
+    }
+
+    const centerX = this.scale ? this.scale.width / 2 : 480;
+    const centerY = this.scale ? this.scale.height / 2 : 270;
+    const text = this.add
+      .text(centerX, centerY, message, {
+        fontFamily: "Mulmaru",
+        fontSize: "40px",
+        fill: "#ffeb3b",
+        stroke: "#000000",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(3000)
+      .setAlpha(0);
+
+    this.phaseAlertText = text;
+
+    this.tweens.add({
+      targets: text,
+      alpha: 1,
+      duration: 220,
+      ease: "Quad.easeOut",
+      yoyo: true,
+      hold: 900,
+      onComplete: () => {
+        if (text && text.destroy) text.destroy();
+        if (this.phaseAlertText === text) this.phaseAlertText = null;
+      },
+    });
+  }
+
+  setupDevDebugTools() {
+    this.devDebugLastUpdateAt = 0;
+    this.devDebugText = this.add
+      .text(12, 12, "", {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: "#7CFFB2",
+        stroke: "#000000",
+        strokeThickness: 3,
+      })
+      .setScrollFactor(0)
+      .setDepth(2000);
+
+    this.input.keyboard.on("keydown-F2", () => {
+      if (this.isGameOver) return;
+      this.elapsedTime = Math.max(this.elapsedTime || 0, PHASE2_START_SEC);
+      this.updateVisualPhase();
+      DifficultySystem.updateDifficultyScaling(this);
+      this.updateDevDebugOverlay(true);
+    });
+
+    this.input.keyboard.on("keydown-F3", () => {
+      if (this.isGameOver) return;
+      this.elapsedTime = Math.max(this.elapsedTime || 0, PHASE3_START_SEC);
+      this.updateVisualPhase();
+      DifficultySystem.updateDifficultyScaling(this);
+      this.updateDevDebugOverlay(true);
+    });
+
+    this.input.keyboard.on("keydown-F4", () => {
+      if (this.isGameOver) return;
+      if (this.isPaused || this.isCountdownRunning || this.isChoosingUpgrade) return;
+      const debugFragmentItem = { active: true, destroy: () => {} };
+      UpgradeSystem.onPlayerPickupItem(this, this.player, debugFragmentItem);
+      this.updateDevDebugOverlay(true);
+    });
+  }
+
+  updateDevDebugOverlay(force = false) {
+    if (!DEV_MODE || !this.devDebugText) return;
+    const nowMs = this.time?.now ?? 0;
+    if (!force && nowMs - this.devDebugLastUpdateAt < 200) return;
+    this.devDebugLastUpdateAt = nowMs;
+
+    const phase = DifficultySystem.getCurrentPhase(this);
+    const cap = DifficultySystem.getMaxActiveEnemies(this);
+    const active = this.enemies ? this.enemies.countActive(true) : 0;
+    let shooters = 0;
+    if (this.enemies) {
+      this.enemies.children.iterate((enemy) => {
+        if (!enemy || !enemy.active) return;
+        if (enemy.getData("type") === "shooter") shooters += 1;
+      });
+    }
+
+    const fps = this.game?.loop?.actualFps ?? 0;
+    const delayMs = this.spawnEvent?.delay ?? 0;
+    const elapsed = this.elapsedTime || 0;
+
+    this.devDebugText.setText(
+      [
+        `[DEV] t=${elapsed.toFixed(1)}s phase=${phase}`,
+        `enemies=${active}/${cap} shooters=${shooters}`,
+        `spawnDelay=${Math.round(delayMs)}ms fps=${Math.round(fps)}`,
+        "F2:phase2 F3:phase3 F4:openUpgrade",
+      ].join("\n")
+    );
+  }
+
   update(time, delta) {
     if (this.isGameOver) {
       return;
@@ -327,12 +572,12 @@ export default class GameScene extends Phaser.Scene {
 
     const dt = delta / 1000;
 
-    // 일시정지 상태에서는 게임 로직 업데이트 중단 (UI용 타이머는 Phaser Time으로 동작)
+    // Stop gameplay updates while paused (UI timers still run via Phaser Time).
     if (this.isPaused) {
       return;
     }
 
-    // 프래그먼트 상자 업그레이드/뱃지 UI가 떠 있는 동안에는 게임 시간·난이도 진행을 멈춘다.
+    // Freeze game-time progression while upgrade/badge selection UI is open.
     if (this.isChoosingUpgrade) {
       return;
     }
@@ -342,8 +587,23 @@ export default class GameScene extends Phaser.Scene {
       this.capturePlaySnapshot(this.playLogNextSnapshotAtSec);
       this.playLogNextSnapshotAtSec += 60;
     }
+    this.updateVisualPhase();
+    if (!this.bgGridTransitionTween) {
+      const nowMs = this.time?.now ?? 0;
+      if (nowMs - this.bgGridWaveLastDrawAt >= 50) {
+        this.currentMajorGridWave = this.getMajorGridWaveState(this.currentGridColor);
+        this.drawBackgroundGrid(
+          this.currentGridColor,
+          this.currentMajorGridWave.alpha,
+          this.currentMajorGridWave.color,
+          this.currentMajorGridWave.width
+        );
+        this.bgGridWaveLastDrawAt = nowMs;
+      }
+    }
+    this.updateDevDebugOverlay();
 
-    // 남은 시간 갱신 및 표시 (30:00 → 00:00)
+    // Update and display remaining time (30:00 -> 00:00).
     if (typeof GAME_TIME_LIMIT_SEC === "number" && this.timerText) {
       const total = GAME_TIME_LIMIT_SEC;
       const remaining = Math.max(0, Math.floor(total - this.elapsedTime));
@@ -355,21 +615,21 @@ export default class GameScene extends Phaser.Scene {
         .padStart(2, "0")}`;
       this.timerText.setText(text);
 
-      // 5분(300초) 미만일 때만 노란색, 그 외에는 흰색
+      // Turn timer yellow only in the last 5 minutes (under 300 seconds).
       if (remaining < 300) {
         this.timerText.setFill("#ffeb3b");
       } else {
         this.timerText.setFill("#ffffff");
       }
 
-      // 30분이 지나면 자동 종료 (Clear)
+      // Auto-end the run as clear when time reaches zero.
       if (remaining <= 0) {
         this.endGame(true);
         return;
       }
     }
 
-    // 5분마다 뱃지 슬롯 +1 (최대 7개)
+    // Increase badge slots by +1 every 5 minutes (up to the max).
     if (
       typeof this.badgeSlotCount === "number" &&
       typeof this.badgeSlotMax === "number" &&
@@ -410,16 +670,14 @@ export default class GameScene extends Phaser.Scene {
     }
 
     DifficultySystem.updateDifficultyScaling(this);
-    // runner 뱃지: 시간 기반 속도 위에 배율 적용 (updateDifficultyScaling 이후에 적용해야 덮어쓰이지 않음)
-    if (!DEV_MODE) {
-      this.playerSpeed *= BadgeSystem.getPlayerSpeedMultiplier(this);
-    }
+    // Apply runner badge multiplier after base difficulty scaling.
+    this.playerSpeed *= BadgeSystem.getPlayerSpeedMultiplier(this);
     PlayerSystem.handleMovement(this);
 
-    // 플레이어에서 너무 먼 적 제거 (화면 밖 300마리 쌓여 스폰이 막히는 것 방지)
+    // Cull enemies far from the player to prevent off-screen buildup.
     EnemySystem.cullDistantEnemies(this);
 
-    // 적 그리드 1회 구성 → separation + 셀 타겟팅에서 재사용 (O(n²) → O(n×k))
+    // Build one enemy grid and reuse it for separation and cell targeting (O(n^2) -> O(n*k)).
     const enemyBuilt = EnemySystem.buildEnemyGrid(this, 64);
     this._enemyGrid = enemyBuilt.grid;
     EnemySystem.moveEnemiesTowardsPlayer(this, enemyBuilt);
@@ -489,3 +747,4 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 }
+

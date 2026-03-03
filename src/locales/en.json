@@ -194,5 +194,9 @@
       "name": "Compass",
       "description": "Arrow points to a fragments **location**."
     }
+  },
+  "phaseAlert": {
+    "phase2": "System Error Detected!",
+    "phase3": "System Overload!"
   }
 }

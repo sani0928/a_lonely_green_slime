@@ -1,7 +1,5 @@
 /** HUD 생성 및 대시보드(HP/Cells/Attack/Badges/Kills) 갱신 */
 import {
-  DEV_MODE,
-  DEV_MAX_CAP,
   PLAYER_MAX_HP_CAP,
   CELL_MAX_COUNT,
   ATTACK_UPGRADE_MAX,
@@ -256,23 +254,14 @@ export function updateDashboard(scene) {
   if (scene.hpValueText) {
     let hpValueStr = "";
     let hpColor = "#ffab91";
-    if (DEV_MODE) {
-      const cap = DEV_MAX_CAP;
-      const hp = Math.min(scene.playerHp ?? 0, cap);
-      hpValueStr = `${hp}/${cap}`;
-      const ratio = cap > 0 ? hp / cap : 0;
-      if (ratio >= 0.7) hpColor = "#81c784";
-      else if (ratio < 0.3) hpColor = "#ef5350";
-    } else {
-      const baseCap = PLAYER_MAX_HP_CAP ?? 10;
-      const hpBonus = BadgeSystem.getMaxHpBonus(scene);
-      const cap = baseCap + hpBonus;
-      const hp = scene.playerHp ?? 0;
-      hpValueStr = `${hp}/${cap}`;
-      const ratio = cap > 0 ? hp / cap : 0;
-      if (ratio >= 0.7) hpColor = "#81c784";
-      else if (ratio < 0.3) hpColor = "#ef5350";
-    }
+    const baseCap = PLAYER_MAX_HP_CAP ?? 10;
+    const hpBonus = BadgeSystem.getMaxHpBonus(scene);
+    const cap = baseCap + hpBonus;
+    const hp = scene.playerHp ?? 0;
+    hpValueStr = `${hp}/${cap}`;
+    const ratio = cap > 0 ? hp / cap : 0;
+    if (ratio >= 0.7) hpColor = "#81c784";
+    else if (ratio < 0.3) hpColor = "#ef5350";
     if (scene.hpLabelText) scene.hpLabelText.setColor(hpColor);
     scene.hpValueText.setColor(hpColor);
     updateStatWithBounce(scene, "hp", scene.hpValueText, hpValueStr);
@@ -280,14 +269,14 @@ export function updateDashboard(scene) {
 
   if (scene.items && scene.itemsValueText) {
     const count = scene.items ? scene.items.countActive(true) : 0;
-    const maxF = DEV_MODE ? DEV_MAX_CAP : 3 + (BadgeSystem.getMaxFragmentBonus(scene) || 0);
+    const maxF = 3 + (BadgeSystem.getMaxFragmentBonus(scene) || 0);
     const fragmentsValueStr = `${count}/${maxF}`;
     updateStatWithBounce(scene, "fragments", scene.itemsValueText, fragmentsValueStr);
   }
 
   if (scene.nextCellValueText) {
     const n = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
-    const maxC = DEV_MODE ? DEV_MAX_CAP : (scene.cellMaxCount ?? CELL_MAX_COUNT) + (BadgeSystem.getCellMaxBonus(scene) || 0);
+    const maxC = (scene.cellMaxCount ?? CELL_MAX_COUNT) + (BadgeSystem.getCellMaxBonus(scene) || 0);
     const cellsValueStr = `${n}/${maxC}`;
     updateStatWithBounce(scene, "cells", scene.nextCellValueText, cellsValueStr);
   }
@@ -331,34 +320,21 @@ export function getDashboardStatsForOverlay(scene) {
 
   let hp = "";
   let hpColor = "#ffab91";
-  if (DEV_MODE) {
-    const cap = DEV_MAX_CAP;
-    const hpVal = Math.min(scene.playerHp ?? 0, cap);
-    hp = `${t("common.hp")} ${hpVal} / ${cap}`;
-    const ratio = cap > 0 ? hpVal / cap : 0;
-    if (ratio >= 0.7) hpColor = "#81c784";
-    else if (ratio < 0.3) hpColor = "#ef5350";
-  } else {
-    const baseCap = PLAYER_MAX_HP_CAP ?? 10;
-    const hpBonus = BadgeSystem.getMaxHpBonus(scene);
-    const cap = baseCap + hpBonus;
-    const hpVal = scene.playerHp ?? 0;
-    hp = `${t("common.hp")} ${hpVal} / ${cap}`;
-    const ratio = cap > 0 ? hpVal / cap : 0;
-    if (ratio >= 0.7) hpColor = "#81c784";
-    else if (ratio < 0.3) hpColor = "#ef5350";
-  }
+  const baseCap = PLAYER_MAX_HP_CAP ?? 10;
+  const hpBonus = BadgeSystem.getMaxHpBonus(scene);
+  const cap = baseCap + hpBonus;
+  const hpVal = scene.playerHp ?? 0;
+  hp = `${t("common.hp")} ${hpVal} / ${cap}`;
+  const ratio = cap > 0 ? hpVal / cap : 0;
+  if (ratio >= 0.7) hpColor = "#81c784";
+  else if (ratio < 0.3) hpColor = "#ef5350";
 
   let cells = "";
   const nCell = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
-  if (DEV_MODE) {
-    cells = `${t("common.cells")}: ${nCell}/${DEV_MAX_CAP}`;
-  } else {
-    const baseMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
-    const cellBonus = BadgeSystem.getCellMaxBonus(scene);
-    const max = baseMax + cellBonus;
-    cells = `${t("common.cells")}: ${nCell}/${max}`;
-  }
+  const baseMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
+  const cellBonus = BadgeSystem.getCellMaxBonus(scene);
+  const max = baseMax + cellBonus;
+  cells = `${t("common.cells")}: ${nCell}/${max}`;
 
   const nAttack = scene.attackUpgradeCount ?? 0;
   const attack = `${t("common.attack")}: +${nAttack}`;

@@ -1,18 +1,23 @@
-import {
+﻿import {
   ENEMY_SPAWN_MARGIN,
   ENEMY_BASE_HP,
   ENEMY_HP_PER_DIFFICULTY,
   ENEMY_TYPES,
   EXTRA_ENEMIES_CAP,
-  EXTRA_ENEMIES_CAP_STRONG,
   ENEMY_CULL_DISTANCE,
   USE_PIXEL_SPRITES,
+  GAME_TIME_LIMIT_SEC,
+  SHOOTER_CAP_STEP_SEC,
+  SHOOTER_SPAWN_INTERVAL_SEC,
+  PHASE_SPAWN_AMOUNT_BONUS,
+  PHASE_AGGRO_RADIUS_MULTIPLIER,
+  PHASE_AGGRO_CHASE_SPEED_MULTIPLIER,
 } from "../config/constants.js";
 import {
   pickEnemyTier,
-  isStrongPlayer,
-  getPlayerStrength,
+  getSpawnPressure,
   getMaxActiveEnemies,
+  getCurrentPhase,
 } from "./difficultySystem.js";
 import { getEnemySpawnMultiplier } from "./badgeSystem.js";
 import {
@@ -27,6 +32,12 @@ const TIER_TO_TYPES = {
   mid: ["grunt", "soldier"],
   strong: ["brute", "titan"],
 };
+
+function getShooterTimeProgress(scene) {
+  const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
+  const horizon = Math.max(1, GAME_TIME_LIMIT_SEC || 1800);
+  return Phaser.Math.Clamp(elapsed / horizon, 0, 1);
+}
 
 function pickEnemyType(scene) {
   const tier = pickEnemyTier(scene);
@@ -50,46 +61,39 @@ function countEnemiesOfType(scene, type) {
   return count;
 }
 
-/** 시간·플레이어 강함에 따라 shooter 필드 상한(1~6)과 스폰 확률(5%~60%) 조절 후 타입 반환 */
-function pickSpawnType(scene) {
-  const shootersNow = countEnemiesOfType(scene, "shooter");
-  const t = scene.elapsedTime || 0;
-  const strength = getPlayerStrength(scene); // 0.0 ~ 1.0
-
-  let tNorm;
-  if (t <= 600) {
-    tNorm = Phaser.Math.Clamp(t / 900, 0, 1);
-  } else if (t <= 900) {
-    tNorm = 2 / 3 + ((t - 600) / 300) * 0.2;
-  } else {
-    tNorm = 0.8666666667 + ((t - 900) / 300) * 0.1333333333;
-  }
-  tNorm = Phaser.Math.Clamp(tNorm, 0, 1);
-  const mix = Phaser.Math.Clamp(0.5 * tNorm + 0.5 * strength, 0, 1);
-
-  // 필드에 존재 가능한 shooter 최대 수: 초반 1~2 → 후반 5~6
-  const maxShooters = Phaser.Math.Clamp(
-    Math.round(1 + mix * 5),
-    1,
-    6
-  );
-
-  let enemyType = pickEnemyType(scene);
-
-  if (shootersNow < maxShooters) {
-    const baseChance = 0.08;
-    const extra = 0.34 * mix; // 후반/강할수록 원거리 비율 증가(상승 폭 완화)
-    const shooterChance = Phaser.Math.Clamp(baseChance + extra, 0.05, 0.45);
-
-    if (Math.random() < shooterChance) {
-      enemyType = "shooter";
-    }
-  }
-
-  return enemyType;
+function getShooterCap(scene) {
+  const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
+  const step = Math.max(1, SHOOTER_CAP_STEP_SEC || 300);
+  return 1 + Math.floor(elapsed / step);
 }
 
-// 적 타입별 tint + scale
+/** Pick spawn type with time-based shooter cap and fixed spawn interval. */
+function pickSpawnType(scene) {
+  const shootersNow = countEnemiesOfType(scene, "shooter");
+  const now = scene.elapsedTime || 0;
+  const maxShooters = getShooterCap(scene);
+
+  let enemyType = pickEnemyType(scene);
+  if (shootersNow >= maxShooters) {
+    return enemyType;
+  }
+
+  if (typeof scene.nextShooterSpawnAtSec !== "number") {
+    scene.nextShooterSpawnAtSec = now + (SHOOTER_SPAWN_INTERVAL_SEC || 20);
+    return enemyType;
+  }
+
+  const nextShooterSpawnAtSec = scene.nextShooterSpawnAtSec;
+
+  if (now < nextShooterSpawnAtSec) {
+    return enemyType;
+  }
+
+  scene.nextShooterSpawnAtSec = now + (SHOOTER_SPAWN_INTERVAL_SEC || 20);
+  return "shooter";
+}
+
+// Enemy visual tint and scale by type.
 const ENEMY_TYPE_VISUALS = {
   runner: { tint: 0x4fc3f7, scale: 0.9 },
   mite: { tint: 0x26a69a, scale: 0.75 },
@@ -111,7 +115,7 @@ function applyTierVisuals(enemy, type) {
   }
 }
 
-/** 슈터가 플레이어 방향으로 발사체 1발. 속도는 난이도 계수 sqrt 보정, 수명 2.6초 */
+/** Shooter fires one projectile toward player; speed scales by difficulty and lasts 2.6s. */
 function fireRangedShot(scene, enemy, player) {
   if (!scene.enemyProjectiles || !player) return;
 
@@ -122,27 +126,23 @@ function fireRangedShot(scene, enemy, player) {
   proj.setVisible(true);
   proj.body.setAllowGravity(false);
   proj.setCircle(3);
-  // shooter(ARCHER)의 본체 색상과 비슷한 노란색 틴트
+  // Shooter projectile tint.
   proj.setTint(0xf5dc46);
 
-   // 자신을 쏜 슈터와의 즉시 충돌은 무시하기 위해 출처 enemy 를 기록
-   if (proj.setData) {
-     proj.setData("sourceEnemy", enemy);
-   }
+  // remember who fired this projectile to ignore immediate self-collision
+  if (proj.setData) {
+    proj.setData("sourceEnemy", enemy);
+  }
 
-  // 일시정지 상태에서도 수명이 흐르지 않도록,
-  // expiring 은 GameScene.update에서 elapsedTime 기준으로 처리한다.
+  // Use elapsedTime-based expiry so pause does not consume projectile lifetime.
   if (proj.setData && typeof scene.elapsedTime === "number") {
     const lifeSec = 2.6;
     proj.setData("expireAt", scene.elapsedTime + lifeSec);
   }
 
   const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
-  const difficulty = scene.enemyDifficultyFactor || 1;
-  const baseSpeed = 220;
-  // difficulty 1 → 220, difficulty 21 → 660 (sqrt로 점진적 상승)
-  const diffBonus = Math.max(0, difficulty - 1);
-  const speed = baseSpeed + 440 * Math.sqrt(diffBonus / 20);
+  const progress = getShooterTimeProgress(scene);
+  const speed = 220 + (500 - 220) * progress;
   const vx = Math.cos(angle) * speed;
   const vy = Math.sin(angle) * speed;
   proj.setVelocity(vx, vy);
@@ -161,7 +161,7 @@ function initializeEnemyStats(scene, enemy, type, difficulty) {
   enemy.setData("scoreValue", cfg.score ?? 10);
 }
 
-/** 플레이어에서 너무 먼 적 제거. 화면 밖에 300마리 쌓여 스폰이 막히는 버그 방지 */
+/** Cull enemies far away from player so off-screen buildup does not block spawning. */
 export function cullDistantEnemies(scene) {
   const player = scene.player;
   if (!player || !scene.enemies) return;
@@ -178,7 +178,7 @@ export function cullDistantEnemies(scene) {
   }
 }
 
-/** 뷰 기준 랜덤 가장자리(상/우/하/좌) 한 점 반환 */
+/** Return one random position along the camera edge (+margin). */
 function getRandomSpawnPosition(view, margin) {
   const side = Phaser.Math.Between(0, 3);
   switch (side) {
@@ -207,6 +207,7 @@ function getRandomSpawnPosition(view, margin) {
 }
 
 export function spawnEnemy(scene) {
+  const phase = getCurrentPhase(scene);
   const baseCap = getMaxActiveEnemies(scene);
   const cap = Math.round(baseCap * getEnemySpawnMultiplier(scene));
   if (scene.enemies && scene.enemies.countActive(true) >= cap) {
@@ -216,18 +217,17 @@ export function spawnEnemy(scene) {
   const view = cam.worldView;
   const margin = ENEMY_SPAWN_MARGIN;
 
-  const extraCapBase = isStrongPlayer(scene)
-    ? EXTRA_ENEMIES_CAP_STRONG
-    : EXTRA_ENEMIES_CAP;
+  const extraCapBase = EXTRA_ENEMIES_CAP;
   const spawnMul = getEnemySpawnMultiplier(scene);
   const extraCap = Math.round(extraCapBase * spawnMul);
-  const strength = getPlayerStrength(scene);
+  const spawnPressure = getSpawnPressure(scene);
   const extraEnemies = Phaser.Math.Clamp(
-    Math.round(extraCap * strength),
+    Math.round(extraCap * spawnPressure),
     0,
     extraCap
   );
-  const totalToSpawn = 1 + extraEnemies;
+  const phaseSpawnBonus = PHASE_SPAWN_AMOUNT_BONUS[phase] ?? 0;
+  const totalToSpawn = 1 + extraEnemies + phaseSpawnBonus;
 
   const usePixel =
     USE_PIXEL_SPRITES && scene.textures && scene.textures.exists("entities");
@@ -283,16 +283,18 @@ export function spawnEnemy(scene) {
     if (enemyType === "shooter") {
       behavior = "shooter_behavior";
       enemy.setData("nextShotAt", (scene.elapsedTime || 0) + 1.4);
-      // 플레이어 주변 원 위에서 흩어지기 위한 목표 각도 (스폰 시 랜덤 부여)
+      // Random preferred orbit angle to reduce shooter clustering.
       enemy.setData("preferredAngle", Math.random() * Math.PI * 2);
     } else {
       behavior = "monsters_behavior";
       const baseAggro = 260;
       const variance = 40;
-      const aggroRadius = baseAggro + Phaser.Math.Between(-variance, variance);
+      const aggroRadiusBase = baseAggro + Phaser.Math.Between(-variance, variance);
+      const aggroRadiusMul = PHASE_AGGRO_RADIUS_MULTIPLIER[phase] ?? 1;
       enemy.setData("monsters_behaviorRoamAngle", Math.random() * Math.PI * 2);
       enemy.setData("monsters_behaviorAggro", false);
-      enemy.setData("monsters_behaviorAggroRadius", aggroRadius);
+      enemy.setData("monsters_behaviorBaseAggroRadius", aggroRadiusBase);
+      enemy.setData("monsters_behaviorAggroRadius", aggroRadiusBase * aggroRadiusMul);
     }
     enemy.setData("behavior", behavior);
   }
@@ -301,7 +303,7 @@ export function spawnEnemy(scene) {
 const GRID_CELL_SIZE = 64;
 
 /**
- * 그리드 기반 공간 해시 구성. separation/타겟팅에서 O(n×k)로 비용 축소용.
+ * Build a spatial hash grid to reduce neighbor search cost for separation/targeting.
  * @returns {{ grid: Map<string, import("phaser").GameObjects.GameObject[]>, enemies: import("phaser").GameObjects.GameObject[] }}
  */
 export function buildEnemyGrid(scene, cellSize = GRID_CELL_SIZE) {
@@ -338,6 +340,9 @@ function getNeighborsForSeparation(enemy, grid, cellSize) {
 export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
   const player = scene.player;
   if (!player) return;
+  const phase = getCurrentPhase(scene);
+  const aggroRadiusMul = PHASE_AGGRO_RADIUS_MULTIPLIER[phase] ?? 1;
+  const chaseSpeedMul = PHASE_AGGRO_CHASE_SPEED_MULTIPLIER[phase] ?? 1;
 
   const cellSize = GRID_CELL_SIZE;
   let grid;
@@ -382,7 +387,7 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
       player.y
     );
 
-    // 기본 진행 방향 벡터 (정규화)
+    // Base movement direction vector.
     let dirX;
     let dirY;
 
@@ -397,15 +402,16 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
       const desiredMax = 320;
 
       if (dist < desiredMin * 0.85) {
-        // 너무 가까우면 뒤로 빠지기
+        // too close: back away
         dirX = -Math.cos(baseAngle);
         dirY = -Math.sin(baseAngle);
       } else if (dist > desiredMax * 1.1) {
-        // 너무 멀면 살짝 다가가기
+        // too far: move in
         dirX = Math.cos(baseAngle);
         dirY = Math.sin(baseAngle);
       } else {
-        // 적당한 거리: 선호 각도로 원 위를 이동해 다른 슈터와 위치가 흩어지게
+        // maintain side-orbit tendency around player
+        // keep a side-orbit tendency so shooters don't stack at one angle
         const currentAngle = Phaser.Math.Angle.Wrap(baseAngle + Math.PI);
         const preferred = enemy.getData("preferredAngle") ?? currentAngle;
         let diff = Phaser.Math.Angle.Wrap(preferred - currentAngle);
@@ -419,10 +425,8 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
       const nextShotAt = enemy.getData("nextShotAt") || 0;
       if (now >= nextShotAt) {
         fireRangedShot(scene, enemy, player);
-        const difficulty = scene.enemyDifficultyFactor || 1;
-        const baseCd = 2.4;
-        const minCd = 1.1;
-        const cd = Math.max(minCd, baseCd - 0.12 * (difficulty - 1));
+        const progress = getShooterTimeProgress(scene);
+        const cd = 3 + (2 - 3) * progress;
         enemy.setData("nextShotAt", now + cd);
       }
     } else {
@@ -433,7 +437,12 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
           player.x,
           player.y
         );
-        const aggroRadius = enemy.getData("monsters_behaviorAggroRadius") || 260;
+        const baseAggroRadius =
+          enemy.getData("monsters_behaviorBaseAggroRadius") ||
+          enemy.getData("monsters_behaviorAggroRadius") ||
+          260;
+        const aggroRadius = baseAggroRadius * aggroRadiusMul;
+        enemy.setData("monsters_behaviorAggroRadius", aggroRadius);
         let monsters_behaviorAggro = enemy.getData("monsters_behaviorAggro");
 
         if (!monsters_behaviorAggro && distToPlayer <= aggroRadius) {
@@ -442,11 +451,12 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
         }
 
         if (monsters_behaviorAggro) {
-          // aggro 상태: 플레이어를 향해 직선 추적
+          // Aggro: move directly toward player.
           dirX = Math.cos(baseAngle);
           dirY = Math.sin(baseAngle);
+          speedScale *= chaseSpeedMul;
         } else {
-          // 평시 로밍: 천천히 방향이 변하는 랜덤 배회
+          // Roam: slowly wandering direction with jitter.
           let roamAngle = enemy.getData("monsters_behaviorRoamAngle");
           if (typeof roamAngle !== "number") {
             roamAngle = Math.random() * Math.PI * 2;
@@ -458,17 +468,17 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
           dirX = Math.cos(roamAngle);
           dirY = Math.sin(roamAngle);
 
-          // 로밍 시에는 체감 속도를 낮춰 난이도 완화
+          // Keep roaming slower to soften pressure.
           speedScale = 0.55;
         }
       } else {
-        // 예외 상황 fallback: 단순 추적
+        // Fallback: direct chase.
         dirX = Math.cos(baseAngle);
         dirY = Math.sin(baseAngle);
       }
     }
 
-    // --- 집단 행동: 주변 적과의 간격을 벌려 큰 무리 뭉침 완화 (separation, 그리드 기반 O(n×k)) ---
+    // Separation: spread nearby enemies to reduce clumping (grid-based O(n*k)).
     let sepX = 0;
     let sepY = 0;
     let sepCount = 0;
@@ -497,7 +507,7 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
       const normSepX = sepX / lenSep;
       const normSepY = sepY / lenSep;
 
-      // separation 가중치: 적당히 퍼지게 (뭉침 완화)
+      // Separation blend weight.
       const w = 0.9;
       finalDirX += normSepX * w;
       finalDirY += normSepY * w;
@@ -509,7 +519,7 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
       finalDirY /= lenFinal;
     }
 
-    // 슈터 전용: 반경 96 내 다른 슈터와만 추가 separation으로 흩어져 다양한 위치에서 포격
+    // extra separation among shooters only
     if (type === "shooter") {
       let shSepX = 0;
       let shSepY = 0;
@@ -576,17 +586,17 @@ export function onEnemyHitByEnemyProjectile(scene, enemy, proj) {
   if (!scene || !enemy || !proj) return;
   if (!enemy.active || !proj.active) return;
 
-  // 자신의 탄(발사한 슈터 본인)과의 충돌은 무시
+  // ignore projectile collision with its source enemy
   if (proj.getData && proj.getData("sourceEnemy") === enemy) {
     return;
   }
 
-  // 발사체는 한 번 충돌 후 바로 제거
+  // Projectile disappears on first collision.
   if (proj.destroy) {
     proj.destroy();
   }
 
-  // 적이 이미 넉백 중이면 추가 넉백은 무시(난이도 과도 상승 방지)
+  // Ignore extra knockback while already in knockback state.
   const now = scene.elapsedTime || 0;
   const existingUntil = enemy.getData("knockbackUntil") || 0;
   if (now < existingUntil) return;
@@ -594,7 +604,7 @@ export function onEnemyHitByEnemyProjectile(scene, enemy, proj) {
   let dirX = 0;
   let dirY = 0;
 
-  // 가능하면 발사체의 속도 방향을 기준으로 넉백 방향을 정한다.
+  // Prefer projectile velocity direction for knockback if available.
   const body = proj.body;
   if (body && typeof body.velocity === "object") {
     const vx = body.velocity.x || 0;
@@ -603,7 +613,7 @@ export function onEnemyHitByEnemyProjectile(scene, enemy, proj) {
     dirX = vx / len;
     dirY = vy / len;
   } else {
-    // fallback: 발사체 위치 → 적 위치 방향
+    // Fallback: use vector from projectile position to enemy.
     const dx = enemy.x - proj.x;
     const dy = enemy.y - proj.y;
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -611,7 +621,7 @@ export function onEnemyHitByEnemyProjectile(scene, enemy, proj) {
     dirY = dy / len;
   }
 
-  // 체력은 줄이지 않고, 짧은 넉백만 적용
+  // No HP damage here; only short knockback.
   const kbSpeed = 140;
   const duration = 0.12;
   enemy.setData("knockbackDirX", dirX);
@@ -629,7 +639,7 @@ export function applyDamage(scene, enemy, damage, isCritical = false) {
   const nextHp = currentHp - (damage || 0);
   enemy.setData("hp", nextHp);
 
-  // 피격 데미지 숫자 표시 (플로팅 텍스트) — 크리티컬 시 굵고 진한 스타일
+  // floating damage text
   if (damage && scene && scene.add && scene.tweens) {
     const dmgValue = Math.round(damage);
     const style = isCritical
@@ -662,7 +672,7 @@ export function applyDamage(scene, enemy, damage, isCritical = false) {
     });
   }
 
-  // 피격 이펙트 (생존 시 작은 이펙트, 사망 시 큰 이펙트)
+  // Hit VFX: small on hit, larger on death.
   if (scene.hitEmitter) {
     const count = nextHp <= 0 ? 14 : 5;
     scene.hitEmitter.explode(count, enemy.x, enemy.y);
@@ -676,7 +686,7 @@ export function applyDamage(scene, enemy, damage, isCritical = false) {
   return false;
 }
 
-/** 적 투사체 만료: expireAt 데이터 기반 제거 */
+/** Remove enemy projectiles when elapsedTime reaches expireAt. */
 export function updateEnemyProjectilesExpiry(scene, now) {
   if (!scene.enemyProjectiles) return;
   scene.enemyProjectiles.children.iterate((proj) => {
@@ -691,3 +701,6 @@ export function updateEnemyProjectilesExpiry(scene, now) {
     }
   });
 }
+
+
+

@@ -1,7 +1,6 @@
-import { DEV_MODE, DEV_MAX_CAP } from "../config/constants.js";
 import { hasBadge } from "./badgeSystem.js";
 
-const POOL_MAX_CELLS = DEV_MODE ? DEV_MAX_CAP : 24;
+const POOL_MAX_CELLS = 24;
 
 export function initCellProjectiles(scene) {
   // 실제 활성 최대 탄환 수(업그레이드/뱃지로 증가)는 이 풀 크기 이하로만 사용
@@ -277,4 +276,3 @@ export function updateCellProjectiles(scene, dt) {
     }
   }
 }
-

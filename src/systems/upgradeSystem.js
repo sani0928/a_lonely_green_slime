@@ -5,10 +5,8 @@ import {
   PLAYER_BASE_ATTACK,
   PLAYER_MAX_HP_CAP,
   CELL_MAX_COUNT,
-  DEV_MODE,
-  DEV_MAX_CAP,
-  DEV_CHEST_KILL_INTERVAL,
   ENEMY_TYPES,
+  DEV_MODE,
   USE_PIXEL_SPRITES,
 } from "../config/constants.js";
 import { getSfxAttackKey } from "../i18n.js";
@@ -33,7 +31,7 @@ import { showScoreGain } from "./hudSystem.js";
 import { BADGES } from "../badges/badgeDefinitions.js";
 import { t } from "../i18n.js";
 
-/** Badge draw에서 Skip 시 등급별 지급 점수 */
+/** Skip reward score when skipping a badge draw result, by rarity. */
 const SKIP_SCORE_BY_RARITY = { normal: 500, epic: 1000, unique: 3000 };
 
 function getSkipScoreForBadge(badge) {
@@ -44,10 +42,8 @@ function getSkipScoreForBadge(badge) {
 export function spawnUpgradeItem(scene) {
   if (!scene.worldWidth || !scene.worldHeight) return false;
 
-  const baseMaxActive = DEV_MODE ? DEV_MAX_CAP : 3;
-  const maxActive = DEV_MODE
-    ? baseMaxActive
-    : baseMaxActive + getMaxFragmentBonus(scene);
+  const baseMaxActive = 3;
+  const maxActive = baseMaxActive + getMaxFragmentBonus(scene);
   if (scene.items && scene.items.countActive(true) >= maxActive) {
     return false;
   }
@@ -167,7 +163,7 @@ function findChainTarget(scene, sourceEnemy, bullet) {
   return nearest;
 }
 
-/** 적 사망 시 코인 점수: scoreValue 우선, 없으면 ENEMY_TYPES[type].score, 최종 기본값 10 */
+/** Base kill score source order: enemy scoreValue -> ENEMY_TYPES[type].score -> default 10. */
 function getBaseKillScore(enemy) {
   if (!enemy || !enemy.getData) return 10;
 
@@ -185,7 +181,7 @@ function getBaseKillScore(enemy) {
   return 10;
 }
 
-/** 점수 구간별 코인 등급: 100+ 다이아, 50+ 금, 30+ 은, 그 외 동 */
+/** Coin tier by score value: 100+ diamond, 50+ gold, 30+ silver, otherwise copper. */
 function getCoinKindForValue(value) {
   const v = Math.max(0, Math.floor(value || 0));
   if (v >= 100) return "diamond";
@@ -232,7 +228,7 @@ function spawnCoinsForEnemy(scene, enemy, baseScore) {
 
   if (!coin || !coin.body) return;
 
-  // 코인은 대시보드(depth 1~2) 아래, 필드 레이어에 표시
+  // Keep coins below HUD layers so they stay visible in the field.
   if (coin.setDepth) {
     coin.setDepth(0);
   }
@@ -253,8 +249,8 @@ function spawnCoinsForEnemy(scene, enemy, baseScore) {
 
   if (coin.setData) {
     coin.setData("coinValue", baseScore);
-    // 코인 생성 시점(게임 진행 시간 기준)을 저장해 두고,
-    // GameScene.update에서 elapsedTime을 기준으로 수명/깜빡임을 관리한다.
+    // Store coin spawn time in gameplay elapsed seconds.
+    // Lifetime/flicker handling is processed in GameScene.update using elapsedTime.
     if (typeof scene.elapsedTime === "number") {
       coin.setData("spawnTime", scene.elapsedTime);
     }
@@ -268,7 +264,7 @@ export function onBulletHitEnemy(scene, bullet, enemy) {
   const isHoming = bullet.getData && bullet.getData("homing");
   let chainConsumed = false;
 
-  // 체인 공격: 적을 맞췄을 때, 근처 다른 적에게 최대 2번까지 연쇄 타격
+  // Chain Attack: after hitting one target, bounce to nearby targets (up to max hops).
   if (hasChain && isHoming && bullet.getData) {
     const currentChains = bullet.getData("chainCount") || 0;
     if (currentChains < CHAIN_ATTACK_MAX_HOPS) {
@@ -289,34 +285,34 @@ export function onBulletHitEnemy(scene, bullet, enemy) {
     }
   }
 
-  // 체인으로 다른 적에게 날아가지 않았다면, 기존처럼 셀 궤도로 복귀
+  // If chain does not continue, return the homing bullet to its cell as usual.
   if (isHoming && !chainConsumed && bullet.getData) {
     CellSystem.returnBulletToCell(scene, bullet);
   }
 
-  // 뱃지 훅: 적 피격
+  // Apply badge-related on-hit effects.
   onEnemyHit(scene, enemy);
 
-  // 기본 공격력에 ±10~15% 랜덤 변동 적용
+  // Base damage with per-hit variance (~80% to 120%).
   const baseDamage = scene.playerAttackPower || 1;
   const factor = Phaser.Math.FloatBetween(0.8, 1.2);
   let damage = Math.max(1, Math.round(baseDamage * factor));
   const isCritical = hasBadge(scene, "critical") && Math.random() < 0.2;
   if (isCritical) damage *= 2;
 
-  // 적이 살아 있을 때의 데이터를 기반으로 코인 점수를 계산해 둔다.
-  // (destroy 이후엔 DataManager/scale 등이 깨질 수 있으므로 선계산)
+  // Capture base score before destroy; score metadata may be unavailable afterward.
+  // This prevents incorrect fallback scoring after enemy destruction.
   const baseScoreForKill = getBaseKillScore(enemy);
 
   const killed = applyDamage(scene, enemy, damage, isCritical);
 
-  // 적 타격 사운드 (설정 sfx_attack 1|2|3)
+  // Attack SFX from current settings (sfx_attack 1|2|3).
   if (scene.sound && scene.sound.play) {
     scene.sound.play(getSfxAttackKey(), { volume: 0.7 });
   }
 
   if (!killed) {
-    // 적이 살아 있으면 넉백: 플레이어 반대 방향으로 살짝 밀기
+    // On hit but not kill, apply brief knockback away from the player.
     const player = scene.player;
     if (player) {
       const dx = enemy.x - player.x;
@@ -330,8 +326,8 @@ export function onBulletHitEnemy(scene, bullet, enemy) {
     return;
   }
 
-  // 적이 사망했을 때는 점수를 즉시 지급하지 않고,
-  // 코인을 드랍하여 코인 픽업 시 점수가 올라가도록 처리한다.
+  // On kill, do not add score directly.
+  // Spawn a coin and add score when the player actually picks it up.
   spawnCoinsForEnemy(scene, enemy, baseScoreForKill);
 
   scene.killCount += 1;
@@ -339,14 +335,7 @@ export function onBulletHitEnemy(scene, bullet, enemy) {
 
   onEnemyKilled(scene, enemy);
 
-  // --- 개발 모드: 10킬마다 프래그먼트 상자 1개 ---
-  if (DEV_MODE) {
-    if (scene.killCount % DEV_CHEST_KILL_INTERVAL === 0) {
-      spawnUpgradeItem(scene);
-    }
-    return;
-  }
-
+  // Spawn fragment item when kill threshold is reached.
   if (
     typeof scene.nextItemKillThreshold === "number" &&
     scene.killCount >= scene.nextItemKillThreshold
@@ -360,8 +349,8 @@ export function onBulletHitEnemy(scene, bullet, enemy) {
     if (spawned) {
       scene.nextItemKillThreshold += add;
     } else {
-      // 필드가 최대(3/3)라 스폰 실패: 다음 스폰 진행도를 쌓지 않도록 목표만 올린다.
-      // 2/3가 된 뒤 add킬을 더 쌓아야 다음 프래그먼트가 나온다.
+      // If spawn fails because max active fragments is reached,
+      // move threshold forward so the next attempt happens after additional kills.
       scene.nextItemKillThreshold = k + add;
     }
   }
@@ -370,7 +359,7 @@ export function onBulletHitEnemy(scene, bullet, enemy) {
 export function onPlayerPickupCoin(scene, player, coin) {
   if (!coin || !coin.active) return;
 
-  // 코인에는 몬스터 처치 시점의 기본 점수가 그대로 저장되어 있어야 한다.
+  // Coin carries the base score captured at enemy death time.
   let baseValue = 0;
   if (coin.getData) {
     const stored = coin.getData("coinValue");
@@ -379,7 +368,7 @@ export function onPlayerPickupCoin(scene, player, coin) {
     }
   }
 
-  // 0 이하이거나 유효하지 않으면 점수 증가 없이 종료 (숨은 기본값 10점은 사용하지 않는다).
+  // Ignore invalid or non-positive values (no fallback score injection).
   if (!Number.isFinite(baseValue) || baseValue <= 0) {
     if (coin.destroy) {
       coin.destroy();
@@ -424,7 +413,7 @@ export function onPlayerPickupCoin(scene, player, coin) {
   }
 }
 
-/** 프래그먼트 픽업: 월드 일시정지 → 뱃지 드로우/장착 또는 스킵 선택 → resumeGame()으로 재개 */
+/** Fragment pickup flow: pause world, show upgrade/badge UI, resume via resumeGame(). */
 export function onPlayerPickupItem(scene, player, item) {
   if (!item.active) return;
   item.destroy();
@@ -452,14 +441,72 @@ export function onPlayerPickupItem(scene, player, item) {
     resumeInvincibility(scene);
   };
 
+  const showDevBadgeSelectStep = (showOneMoreButton = true) => {
+    if (typeof window.showUpgradeOverlay !== "function") {
+      resumeGame();
+      return;
+    }
+
+    const choices = [
+      {
+        id: "dev_badge_header",
+        type: "info",
+        label: t("common.badgeDraw"),
+        description: t("upgrade.chooseWhatYouWant"),
+      },
+    ];
+
+    for (let i = 0; i < BADGES.length; i += 1) {
+      const badge = BADGES[i];
+      choices.push({
+        id: `dev_badge_${badge.id}`,
+        type: "dev_badge_pick",
+        badgeId: badge.id,
+        label: t(`badge.${badge.id}.name`),
+        description: t(`badge.${badge.id}.description`) || "",
+        rarity: badge.rarity,
+      });
+    }
+
+    choices.push({
+      id: "dev_badge_cancel",
+      type: "cancel",
+      label: t("common.skip"),
+      description: "",
+    });
+
+    window.showUpgradeOverlay(
+      choices,
+      (choice) => {
+        if (!choice) {
+          resumeGame();
+          return;
+        }
+        if (choice.type === "dev_badge_pick" && choice.badgeId) {
+          const picked = BADGES.find((b) => b.id === choice.badgeId);
+          if (!picked) {
+            resumeGame();
+            return;
+          }
+          showBadgeEquipStep(picked, {
+            showOneMoreButton: hasBadge(scene, "one_more") && showOneMoreButton,
+          });
+          return;
+        }
+        resumeGame();
+      },
+      { scene }
+    );
+  };
+
   const showBadgeEquipStep = (badge, options = {}) => {
     const equippedIds = getEquippedBadges(scene) || [];
     const showOneMoreButton = options.showOneMoreButton === true && hasBadge(scene, "one_more");
 
-    // 현재 슬롯에 이미 이 뱃지가 있는지만 검사. 없으면 빈 슬롯에 장착하거나 기존 뱃지와 교체 가능
+    // Check whether this badge is already equipped in any slot.
     const alreadyInSlot = equippedIds.includes(badge.id);
 
-    // 단일 단계: 새 뱃지 정보 헤더 + 슬롯 UI(빈 슬롯 장착 / 기존 뱃지 교체) + Again / Skip
+    // Unified step: badge info + slot UI + optional Again/Skip actions.
     const rarityLabelMap = {
       normal: t("rarity.normal"),
       epic: t("rarity.epic"),
@@ -515,7 +562,11 @@ export function onPlayerPickupItem(scene, player, item) {
           return;
         }
         if (choice.type === "one_more") {
-          showBadgeDrawStep(false);
+          if (DEV_MODE) {
+            showDevBadgeSelectStep(false);
+          } else {
+            showBadgeDrawStep(false);
+          }
           return;
         }
         if (choice.type === "skip") {
@@ -592,12 +643,12 @@ export function onPlayerPickupItem(scene, player, item) {
 
     let currentTime = 0;
 
-    // 빠칭코 사운드 재생
+    // Play pachinko draw SFX.
     if (scene.sound && scene.sound.play) {
       scene.sound.play("sfx_pachinko", { volume: 0.8 });
     }
 
-    // Phase 1: 빠른 스핀
+    // Phase 1: fast rolling.
     for (let i = 0; i < fastSpins; i += 1) {
       const stepBadge = BadgeDrawForStep();
       scene.time.delayedCall(currentTime, () => {
@@ -607,7 +658,7 @@ export function onPlayerPickupItem(scene, player, item) {
       currentTime += fastInterval;
     }
 
-    // Phase 2: 감속 스핀 + 최종 확정
+    // Phase 2: slowing roll and final fixed result.
     for (let i = 0; i < slowSpins; i += 1) {
       const isLast = i === slowSpins - 1;
       const stepDelay = slowBase + i * slowIncrement;
@@ -636,7 +687,7 @@ export function onPlayerPickupItem(scene, player, item) {
             .setDepth(30)
             .setAlpha(0);
 
-          // 설명 텍스트 페이드 인
+          // Fade in description text.
           if (scene.tweens) {
             scene.tweens.add({
               targets: descText,
@@ -646,7 +697,7 @@ export function onPlayerPickupItem(scene, player, item) {
             });
           }
 
-          // 등급에 따른 살짝 다른 스케일 연출
+          // Rarity-based highlight scale animation.
           if (scene.tweens) {
             let toScale = 1.18;
             if (badge.rarity === "epic") {
@@ -665,9 +716,9 @@ export function onPlayerPickupItem(scene, player, item) {
             });
           }
 
-          // 빠칭코 연출을 조금 더 길게 느낄 수 있도록
-          // 전체 연출(스핀 + 결과 고정)이 끝난 뒤 장착 UI가 뜨도록 약 1.825초 텀을 둔다.
-          // (스핀 총 시간 ≒ 2.275초이므로 2.275 + 1.825 ≒ 4.1초)
+          // Leave a short delay after reveal for readability.
+          // Total wait before equip UI: 1.825s after final reveal.
+          // (With prior roll duration, this keeps overall pacing around 4.1s.)
           scene.time.delayedCall(1825, () => {
             showBadgeEquipStep(badge, {
               showOneMoreButton: hasBadge(scene, "one_more") && showOneMoreButton,
@@ -702,7 +753,7 @@ export function onPlayerPickupItem(scene, player, item) {
       id: "hp",
       type: "stat",
       label: t("upgrade.hpPlus2"),
-      // 풀체력일 때만 비활성화 (체력 +2는 현재 HP만 회복, 최대 HP는 변경하지 않음)
+      // Disable HP option at full health (+2 only heals current HP, does not raise max HP).
       disabled: currentHp >= currentMaxHp,
     },
     {
@@ -736,7 +787,11 @@ export function onPlayerPickupItem(scene, player, item) {
         return;
       }
       if (choice.id === "badge_draw") {
-        showBadgeDrawStep(true);
+        if (DEV_MODE) {
+          showDevBadgeSelectStep(true);
+        } else {
+          showBadgeDrawStep(true);
+        }
         return;
       }
       resumeGame();
@@ -750,13 +805,9 @@ export function applyUpgrade(scene, choice) {
   switch (choice) {
     case "cell_count": {
       const current = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
-      if (DEV_MODE) {
-        scene.cellActiveCount = Math.min(current + 1, DEV_MAX_CAP);
-      } else {
-        const baseMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
-        const cellCap = baseMax + getCellMaxBonus(scene);
-        scene.cellActiveCount = Math.min(current + 1, cellCap);
-      }
+      const baseMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
+      const cellCap = baseMax + getCellMaxBonus(scene);
+      scene.cellActiveCount = Math.min(current + 1, cellCap);
       break;
     }
     case "attack": {
@@ -769,7 +820,7 @@ export function applyUpgrade(scene, choice) {
       break;
     }
     case "hp": {
-      // 현재 체력 +2 (최대치 초과 시 최대치로만 제한, 최대 HP는 변경하지 않음)
+      // Heal current HP by +2, capped at current max HP (does not change max HP).
       const maxHp = scene.playerMaxHp ?? (PLAYER_MAX_HP_CAP ?? 10);
       const beforeHp = scene.playerHp ?? 0;
       scene.playerHp = Math.min(beforeHp + 2, maxHp);
@@ -785,7 +836,7 @@ export function applyUpgrade(scene, choice) {
   }
 }
 
-/** 코인 수명(30초 만료) 및 20~25초/25~30초 구간 깜빡임 */
+/** Coin lifetime: expire at 30s, flicker in 20-25s and 25-30s windows. */
 export function updateCoinLifetime(scene, now) {
   if (!scene.coins) return;
   scene.coins.children.iterate((coin) => {
@@ -825,4 +876,5 @@ export function updateCoinLifetime(scene, now) {
     }
   });
 }
+
 

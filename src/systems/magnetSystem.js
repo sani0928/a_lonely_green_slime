@@ -2,7 +2,7 @@
 import * as BadgeSystem from "./badgeSystem.js";
 
 const BASE_RADIUS = 200;
-const PULL_SPEED = 360;
+const PULL_SPEED = 500;
 
 export function applyMagnetEffects(scene, dt) {
   if (!BadgeSystem.hasBadge(scene, "magnetic")) return;

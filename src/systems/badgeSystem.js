@@ -3,8 +3,6 @@ import { applyDamage } from "./enemySystem.js";
 import {
   PLAYER_MAX_HP_CAP,
   CELL_MAX_COUNT,
-  DEV_MODE,
-  DEV_MAX_CAP,
   USE_PIXEL_SPRITES,
 } from "../config/constants.js";
 
@@ -288,8 +286,8 @@ function recalcCapsFromBadges(scene) {
   ensureState(scene);
 
   // --- HP 캡 재계산 ---
-  const baseHpCap = DEV_MODE ? DEV_MAX_CAP : PLAYER_MAX_HP_CAP ?? 10;
-  const hpBonus = DEV_MODE ? 0 : getMaxHpBonus(scene);
+  const baseHpCap = PLAYER_MAX_HP_CAP ?? 10;
+  const hpBonus = getMaxHpBonus(scene);
   const hpCap = baseHpCap + hpBonus;
 
   // HUD 표시(cap)와 실제 최대 체력 동기화: 허용 상한(hpCap)으로 설정 (PLAYER_BASE_HP만 쓰면 max가 8로 남아 HP+2/비활성화 버그 발생)
@@ -301,10 +299,8 @@ function recalcCapsFromBadges(scene) {
   }
 
   // --- 탄환(Cells) 캡 재계산 ---
-  const baseCellMax = DEV_MODE
-    ? DEV_MAX_CAP
-    : scene.cellMaxCount ?? CELL_MAX_COUNT;
-  const cellBonus = DEV_MODE ? 0 : getCellMaxBonus(scene);
+  const baseCellMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
+  const cellBonus = getCellMaxBonus(scene);
   const cellCap = baseCellMax + cellBonus;
 
   if (typeof scene.cellActiveCount === "number") {

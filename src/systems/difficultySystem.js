@@ -1,10 +1,4 @@
-import {
-  INITIAL_SPAWN_DELAY_MS,
-  MIN_SPAWN_DELAY_MS,
-  MIN_SPAWN_DELAY_MS_STRONG,
-  MIN_SPAWN_DELAY_MS_LATE,
-  LATE_SPAWN_DELAY_START_SEC,
-  SPAWN_DELAY_DECREASE_PER_SECOND,
+﻿import {
   PLAYER_SPEED_CAP,
   PLAYER_SPEED_RAMP_SEC,
   ENEMY_SPEED_FACTOR_MAX,
@@ -12,123 +6,101 @@ import {
   ENEMY_DIFFICULTY_TIME_SCALE,
   ATTACK_UPGRADE_MAX,
   CELL_MAX_COUNT,
-  MAX_ACTIVE_ENEMIES_BASE,
-  MAX_ACTIVE_ENEMIES_LATE,
-  ENEMY_CAP_RAMP_START_SEC,
-  ENEMY_CAP_RAMP_END_SEC,
   GAME_TIME_LIMIT_SEC,
+  PHASE2_START_SEC,
+  PHASE3_START_SEC,
+  PHASE_ENEMY_CAP_P1,
+  PHASE_ENEMY_CAP_P2,
+  PHASE_ENEMY_CAP_P3,
+  PHASE_SPAWN_DELAY_MAX,
+  PHASE_SPAWN_DELAY_MIN,
 } from "../config/constants.js";
 
-// 플레이어/적 공통 난이도 스케일링 및 티어 계산 로직
-// 구간: 초반 0~5분 성장 재미, 중반 5~15분 점점 어려움, 후반 15분~ 실력 의존(30분 한계)
-
-export function isStrongPlayer(scene) {
-  const attackCount = scene.attackUpgradeCount ?? 0;
-  const cellCount = scene.cellActiveCount ?? scene.cellBaseCount ?? 2;
-  const cellMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
-  return attackCount >= 16 && cellCount >= cellMax - 2;
+export function getCurrentPhase(scene) {
+  const t = scene?.elapsedTime ?? 0;
+  if (t >= PHASE3_START_SEC) return 3;
+  if (t >= PHASE2_START_SEC) return 2;
+  return 1;
 }
 
-/** 현재 시점의 적 상한 (시간에 따라 BASE → LATE로 완만히 상승, 후반 압박) */
+export function getPhaseProgress(scene) {
+  const t = Math.max(0, scene?.elapsedTime ?? 0);
+  const phase = getCurrentPhase(scene);
+  if (phase === 1) {
+    return Phaser.Math.Clamp(t / PHASE2_START_SEC, 0, 1);
+  }
+  if (phase === 2) {
+    return Phaser.Math.Clamp(
+      (t - PHASE2_START_SEC) / (PHASE3_START_SEC - PHASE2_START_SEC),
+      0,
+      1
+    );
+  }
+  const phase3Duration = Math.max(1, (GAME_TIME_LIMIT_SEC || 1800) - PHASE3_START_SEC);
+  return Phaser.Math.Clamp((t - PHASE3_START_SEC) / phase3Duration, 0, 1);
+}
+
 export function getMaxActiveEnemies(scene) {
-  const t = scene.elapsedTime ?? 0;
-  if (t <= ENEMY_CAP_RAMP_START_SEC) return MAX_ACTIVE_ENEMIES_BASE;
-  const ramp =
-    (t - ENEMY_CAP_RAMP_START_SEC) /
-    (ENEMY_CAP_RAMP_END_SEC - ENEMY_CAP_RAMP_START_SEC);
-  const blend = Phaser.Math.Clamp(ramp, 0, 1);
-  return Math.round(
-    MAX_ACTIVE_ENEMIES_BASE +
-      (MAX_ACTIVE_ENEMIES_LATE - MAX_ACTIVE_ENEMIES_BASE) * blend
-  );
+  const phase = getCurrentPhase(scene);
+  if (phase === 1) return PHASE_ENEMY_CAP_P1;
+  if (phase === 2) return PHASE_ENEMY_CAP_P2;
+  return PHASE_ENEMY_CAP_P3;
 }
 
-/** 0~1 플레이어 강함 (공격 업그레이드·셀 개수 기반). 스폰 딜레이·슈터 확률 등에 사용 */
+// Player strength in 0..1.
+// Assumption: +1 cell ~= +2 attack upgrades.
 export function getPlayerStrength(scene) {
   const attackCount = scene.attackUpgradeCount ?? 0;
-  const attackMax = scene.attackUpgradeMax ?? ATTACK_UPGRADE_MAX ?? 10;
-  const attackRatio =
-    attackMax > 0 ? Phaser.Math.Clamp(attackCount / attackMax, 0, 1) : 0;
+  const attackMax = scene.attackUpgradeMax ?? ATTACK_UPGRADE_MAX ?? 20;
 
-  const cellCount = scene.cellActiveCount ?? scene.cellBaseCount ?? 2;
+  const baseCellCount = scene.cellBaseCount ?? 2;
+  const cellCount = scene.cellActiveCount ?? baseCellCount;
   const cellMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
-  const cellRatio =
-    cellMax > 2
-      ? Phaser.Math.Clamp((cellCount - 2) / (cellMax - 2), 0, 1)
-      : 0;
 
-  const raw = attackRatio * 0.65 + cellRatio * 0.35;
-  return Phaser.Math.Clamp(raw, 0, 1);
+  const extraCells = Math.max(0, cellCount - baseCellCount);
+  const extraCellsMax = Math.max(0, cellMax - baseCellCount);
+
+  const equivalentCurrent = attackCount + extraCells * 2;
+  const equivalentMax = Math.max(1, attackMax + extraCellsMax * 2);
+
+  return Phaser.Math.Clamp(equivalentCurrent / equivalentMax, 0, 1);
+}
+
+// Spawn pressure in 0..1 based on time(80%) + player strength(20%).
+export function getSpawnPressure(scene) {
+  const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
+  const horizon = Math.max(1, GAME_TIME_LIMIT_SEC || 1800);
+  const timeProgress = Phaser.Math.Clamp(elapsed / horizon, 0, 1);
+  const strength = getPlayerStrength(scene);
+  return Phaser.Math.Clamp(timeProgress * 0.8 + strength * 0.2, 0, 1);
 }
 
 export function updateDifficultyScaling(scene) {
   const t = scene.elapsedTime;
 
-  // 적 난이도(체력·추가 스폰 수): 시간에 비례, 30분에 고수 한계
   scene.enemyDifficultyFactor =
     1 + t / (ENEMY_DIFFICULTY_TIME_SCALE || 90);
 
-  // 적 속도 배율: 완만한 상한 (후반은 수·체력으로 압박, 속도는 제한)
   const speedRamp = ENEMY_SPEED_RAMP_SEC || 420;
   const speedMax = ENEMY_SPEED_FACTOR_MAX ?? 1.5;
   scene.enemySpeedFactor =
     1 + (speedMax - 1) * (1 - Math.exp(-t / speedRamp));
 
-  // 플레이어 속도: 초반 완만 상승 → 상한 수렴 (조작감 유지, 성장감 확보)
   const base = scene.basePlayerSpeed ?? 220;
   const cap = PLAYER_SPEED_CAP ?? 320;
   const ramp = PLAYER_SPEED_RAMP_SEC ?? 500;
   scene.playerSpeed = base + (cap - base) * (1 - Math.exp(-t / ramp));
 
-  // 스폰 딜레이: 시간 기반(log 형태)으로만 감소.
-  // 초반에는 완만하게 줄어들다가, 후반으로 갈수록 더 빠르게 줄어들도록 설계.
-  const elapsed = Math.max(0, t || 0);
-  const maxDelay = INITIAL_SPAWN_DELAY_MS;
-  let minDelay = MIN_SPAWN_DELAY_MS;
-  const strongPlayer = isStrongPlayer(scene);
+  const phase = getCurrentPhase(scene);
+  const spawnPressure = getSpawnPressure(scene);
+  const maxDelay = PHASE_SPAWN_DELAY_MAX[phase] ?? PHASE_SPAWN_DELAY_MAX[1];
+  const minDelay = PHASE_SPAWN_DELAY_MIN[phase] ?? PHASE_SPAWN_DELAY_MIN[1];
 
-  if (strongPlayer && MIN_SPAWN_DELAY_MS_STRONG != null) {
-    minDelay = Math.min(minDelay, MIN_SPAWN_DELAY_MS_STRONG);
-  }
-  // 10분 이후에는 기존과 같이 후반 압박용 최소 딜레이를 더 낮게 허용
-  if (
-    elapsed >= LATE_SPAWN_DELAY_START_SEC &&
-    MIN_SPAWN_DELAY_MS_LATE != null
-  ) {
-    minDelay = Math.min(minDelay, MIN_SPAWN_DELAY_MS_LATE);
-  }
-
-  // 전체 게임 시간(30분)을 기준으로 0~1 진행도 계산
-  const horizon = GAME_TIME_LIMIT_SEC || 1800;
-  const maxProgress = 0.95;
-  const clampedT = Math.min(elapsed, horizon * maxProgress);
-  const u = clampedT / horizon; // 0 ~ maxProgress
-
-  // log(1 / (1 - u)) 형태의 곡선: 초반에는 완만, 후반(진행도 1에 가까울수록) 급격하게 증가
-  const safeU = Math.min(Math.max(u, 0), maxProgress - 1e-6);
-  const numer = Math.log(1 / (1 - safeU));
-  const denom = Math.log(1 / (1 - maxProgress));
-  const timeFactor = denom > 0 ? numer / denom : 0; // 0 ~ 1
-
-  let newDelay = Phaser.Math.Clamp(
-    maxDelay - (maxDelay - minDelay) * timeFactor,
+  const newDelay = Phaser.Math.Clamp(
+    maxDelay - (maxDelay - minDelay) * spawnPressure,
     minDelay,
     maxDelay
   );
-
-  if (
-    strongPlayer &&
-    elapsed >= LATE_SPAWN_DELAY_START_SEC &&
-    SPAWN_DELAY_DECREASE_PER_SECOND > 0
-  ) {
-    const extraSec = elapsed - LATE_SPAWN_DELAY_START_SEC;
-    const extraReduction = extraSec * SPAWN_DELAY_DECREASE_PER_SECOND;
-    newDelay = Phaser.Math.Clamp(
-      newDelay - extraReduction,
-      minDelay,
-      maxDelay
-    );
-  }
 
   scene.spawnEvent.delay = newDelay;
 }
@@ -139,15 +111,10 @@ function lerp(a, b, t) {
 
 export function getDifficultyProgress(scene) {
   const k = scene.killCount || 0;
-
-  // 티어 비율 진행도는 킬 수만으로 결정 (시간 비의존)
-  const killComponent = k / 600; // 600킬 기준으로 0->1
-  const raw = killComponent;
-
-  return Phaser.Math.Clamp(raw, 0, 1);
+  const killComponent = k / 600;
+  return Phaser.Math.Clamp(killComponent, 0, 1);
 }
 
-/** 진행도(0~1)에 따른 weak/mid/strong 티어 가중치. 킬 기반 진행도와 함께 pickEnemyTier에서 사용 */
 export function getTierWeights(progress) {
   const weak = lerp(1.0, 0.2, progress);
   const mid = lerp(0.0, 0.5, progress);
@@ -155,7 +122,6 @@ export function getTierWeights(progress) {
   return { weak, mid, strong };
 }
 
-/** 킬 기반 진행도 + getTierWeights로 weak|mid|strong 중 하나 반환 */
 export function pickEnemyTier(scene) {
   const progress = getDifficultyProgress(scene);
   const { weak, mid, strong } = getTierWeights(progress);
@@ -171,4 +137,3 @@ export function pickEnemyTier(scene) {
   if (r < mid) return "mid";
   return "strong";
 }
-
