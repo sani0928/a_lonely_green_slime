@@ -3,7 +3,7 @@ export const GAME_VERSION = "0.9.3";
 
 // Dev mode flag.
 // Enables debug overlays/hotkeys only and must not alter gameplay balance.
-export const DEV_MODE = true;
+export const DEV_MODE = false;
 
 // Rendering mode.
 // true: use pixel sprite sheets.
@@ -25,7 +25,7 @@ export const PLAYER_BASE_ATTACK = 10;
 // Attack upgrade progression (20 steps, total +138 => final attack 148)
 export const ATTACK_UPGRADE_MAX = 20;
 export const ATTACK_UPGRADE_AMOUNTS = [
-  6, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7,
+  5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 7,
 ];
 
 // Enemies
