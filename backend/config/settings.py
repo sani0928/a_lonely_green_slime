@@ -75,11 +75,33 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080").split(",")
-CSRF_TRUSTED_ORIGINS = os.environ.get(
+def _split_csv_env(name: str, default: str):
+    raw = os.environ.get(name, default)
+    return [v.strip() for v in raw.split(",") if v and v.strip()]
+
+
+CORS_ALLOWED_ORIGINS = _split_csv_env(
+    "CORS_ALLOWED_ORIGINS",
+    ",".join(
+        [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:8080",
+            "http://127.0.0.1:8080",
+        ]
+    ),
+)
+CSRF_TRUSTED_ORIGINS = _split_csv_env(
     "CSRF_TRUSTED_ORIGINS",
-    "http://localhost:8000,http://127.0.0.1:8000",
-).split(",")
+    ",".join(
+        [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ]
+    ),
+)
 
 # HTTPS 환경(Railway 커스텀 도메인)에서만 secure 쿠키를 사용한다.
 SESSION_COOKIE_SECURE = not DEBUG

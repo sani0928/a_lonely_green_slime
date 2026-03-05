@@ -56,7 +56,8 @@ export function preloadGame(scene) {
   scene.load.audio("sfx_select", "assets/audio/select.wav");
   scene.load.audio("sfx_alert", "assets/audio/alert.wav");
   scene.load.audio("sfx_clear", "assets/audio/clear.wav");
-  scene.load.audio("sfx_game_over", "assets/audio/game_over.flac");
+  scene.load.audio("sfx_clear_ending", "assets/audio/clear_ending.wav");
+  scene.load.audio("sfx_game_over_ending", "assets/audio/game_over_ending.flac");
   scene.load.audio("sfx_pickup", "assets/audio/pickup.mp3");
   scene.load.audio("sfx_pickup_fragment", "assets/audio/pickup_fragment.wav");
   scene.load.audio("sfx_heal", "assets/audio/heal.wav");

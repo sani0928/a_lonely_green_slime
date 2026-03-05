@@ -15,8 +15,6 @@ import {
   INITIAL_ITEM_KILL_THRESHOLD,
   DEV_MODE,
   CLEAR_TIME_SEC,
-  PHASE2_START_SEC,
-  PHASE3_START_SEC,
   USE_PIXEL_SPRITES,
   PHASE_GRID_TRANSITION_MS,
   PHASE_GRID_COLOR_P1,
@@ -476,11 +474,15 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  showPhaseAlert(message, styleOverride = null) {
+  showPhaseAlert(message, styleOverride = null, options = null) {
     if (!message) return;
     if (this.phaseAlertText && this.phaseAlertText.destroy) {
       this.phaseAlertText.destroy();
       this.phaseAlertText = null;
+    }
+    if (this.phaseAlertSubText && this.phaseAlertSubText.destroy) {
+      this.phaseAlertSubText.destroy();
+      this.phaseAlertSubText = null;
     }
 
     const resolvedStyle = {
@@ -505,6 +507,47 @@ export default class GameScene extends Phaser.Scene {
       .setAlpha(0);
 
     this.phaseAlertText = text;
+    const subMessage =
+      options && typeof options.subMessage === "string" ? options.subMessage : "";
+    let subText = null;
+    if (subMessage) {
+      subText = this.add
+        .text(centerX, centerY + 42, subMessage, {
+          fontFamily: "Mulmaru",
+          fontSize: "18px",
+          fill: "#d7ffd9",
+          stroke: "#000000",
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(2999)
+        .setAlpha(0);
+      this.phaseAlertSubText = subText;
+    }
+
+    const blink = !!(options && options.blink);
+    if (blink) {
+      if (subText) {
+        subText.setAlpha(1);
+      }
+      this.tweens.add({
+        targets: text,
+        alpha: { from: 0, to: 1 },
+        duration: 120,
+        ease: "Linear",
+        yoyo: true,
+        repeat: 5,
+        hold: 30,
+        onComplete: () => {
+          if (text && text.destroy) text.destroy();
+          if (this.phaseAlertText === text) this.phaseAlertText = null;
+          if (subText && subText.destroy) subText.destroy();
+          if (this.phaseAlertSubText === subText) this.phaseAlertSubText = null;
+        },
+      });
+      return;
+    }
 
     this.tweens.add({
       targets: text,
@@ -516,8 +559,20 @@ export default class GameScene extends Phaser.Scene {
       onComplete: () => {
         if (text && text.destroy) text.destroy();
         if (this.phaseAlertText === text) this.phaseAlertText = null;
+        if (subText && subText.destroy) subText.destroy();
+        if (this.phaseAlertSubText === subText) this.phaseAlertSubText = null;
       },
     });
+    if (subText) {
+      this.tweens.add({
+        targets: subText,
+        alpha: 1,
+        duration: 220,
+        ease: "Quad.easeOut",
+        yoyo: true,
+        hold: 900,
+      });
+    }
   }
 
   setupDevDebugTools() {
@@ -535,15 +590,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.input.keyboard.on("keydown-F2", () => {
       if (this.isGameOver) return;
-      this.elapsedTime = Math.max(this.elapsedTime || 0, PHASE2_START_SEC);
-      this.updateVisualPhase();
-      DifficultySystem.updateDifficultyScaling(this);
-      this.updateDevDebugOverlay(true);
-    });
-
-    this.input.keyboard.on("keydown-F3", () => {
-      if (this.isGameOver) return;
-      this.elapsedTime = Math.max(this.elapsedTime || 0, PHASE3_START_SEC);
+      this.elapsedTime = Math.max(0, (this.elapsedTime || 0) + 60);
       this.updateVisualPhase();
       DifficultySystem.updateDifficultyScaling(this);
       this.updateDevDebugOverlay(true);
@@ -584,7 +631,7 @@ export default class GameScene extends Phaser.Scene {
         `[DEV] t=${elapsed.toFixed(1)}s phase=${phase}`,
         `enemies=${active}/${cap} shooters=${shooters}`,
         `spawnDelay=${Math.round(delayMs)}ms fps=${Math.round(fps)}`,
-        "F2:phase2 F3:phase3 F4:openUpgrade",
+        "F2:+60s F4:openUpgrade",
       ].join("\n")
     );
   }
@@ -651,7 +698,13 @@ export default class GameScene extends Phaser.Scene {
     }
     if (this.isClearAchieved && !this.clearAchievedAnnounced) {
       this.clearAchievedAnnounced = true;
-      this.showPhaseAlert(t("overlay.clear"), { fill: "#66bb6a" });
+      this.showPhaseAlert(t("overlay.clear"), { fill: "#66bb6a" }, {
+        blink: true,
+        subMessage: t("overlay.clearAfterBonusHint"),
+      });
+      if (this.sound && this.sound.play) {
+        this.sound.play("sfx_clear", { volume: 0.75 });
+      }
     }
 
     // Increase badge slots by +1 every 5 minutes (up to the max).
@@ -763,9 +816,9 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.sound && this.sound.play) {
       if (clearAchieved) {
-        this.sound.play("sfx_clear", { volume: 0.8 });
+        this.sound.play("sfx_clear_ending", { volume: 0.8 });
       } else {
-        this.sound.play("sfx_game_over", { volume: 0.8 });
+        this.sound.play("sfx_game_over_ending", { volume: 0.8 });
       }
     }
 

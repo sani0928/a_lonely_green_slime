@@ -52,9 +52,10 @@
   },
   "overlay": {
     "gameOver": "Game Over",
-    "clear": "Clear!!",
+    "clear": "Clear !!",
     "scoreLabel": "Score:",
     "clearBonus": "×1.5 BONUS!",
+    "clearAfterBonusHint": "After game over, an x1.5 bonus is applied.",
     "enterNickname": "Enter nickname and submit your score.",
     "nicknamePlaceholder": "Nickname (3–32 chars)",
     "topPlayers": "Top 20 Players",
