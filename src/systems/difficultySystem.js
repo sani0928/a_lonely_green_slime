@@ -6,7 +6,9 @@
   ENEMY_DIFFICULTY_TIME_SCALE,
   ATTACK_UPGRADE_MAX,
   CELL_MAX_COUNT,
-  GAME_TIME_LIMIT_SEC,
+  CLEAR_TIME_SEC,
+  ENDLESS_START_SEC,
+  DIFFICULTY_HORIZON_SEC,
   PHASE2_START_SEC,
   PHASE3_START_SEC,
   PHASE_ENEMY_CAP_P1,
@@ -14,6 +16,9 @@
   PHASE_ENEMY_CAP_P3,
   PHASE_SPAWN_DELAY_MAX,
   PHASE_SPAWN_DELAY_MIN,
+  ENDLESS_CAP_STEP_SEC,
+  ENDLESS_CAP_STEP,
+  ENDLESS_CAP_MAX,
 } from "../config/constants.js";
 
 export function getCurrentPhase(scene) {
@@ -36,15 +41,22 @@ export function getPhaseProgress(scene) {
       1
     );
   }
-  const phase3Duration = Math.max(1, (GAME_TIME_LIMIT_SEC || 1800) - PHASE3_START_SEC);
+  const phase3Duration = Math.max(1, (CLEAR_TIME_SEC || 900) - PHASE3_START_SEC);
   return Phaser.Math.Clamp((t - PHASE3_START_SEC) / phase3Duration, 0, 1);
 }
 
 export function getMaxActiveEnemies(scene) {
+  const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
   const phase = getCurrentPhase(scene);
-  if (phase === 1) return PHASE_ENEMY_CAP_P1;
-  if (phase === 2) return PHASE_ENEMY_CAP_P2;
-  return PHASE_ENEMY_CAP_P3;
+  let baseCap = PHASE_ENEMY_CAP_P1;
+  if (phase === 2) baseCap = PHASE_ENEMY_CAP_P2;
+  if (phase === 3) baseCap = PHASE_ENEMY_CAP_P3;
+  if (elapsed < ENDLESS_START_SEC) return baseCap;
+
+  const endlessElapsed = elapsed - ENDLESS_START_SEC;
+  const step = Math.max(1, ENDLESS_CAP_STEP_SEC || 120);
+  const endlessBonus = Math.floor(endlessElapsed / step) * (ENDLESS_CAP_STEP || 40);
+  return Math.min(ENDLESS_CAP_MAX || 700, baseCap + endlessBonus);
 }
 
 // Player strength in 0..1.
@@ -69,10 +81,16 @@ export function getPlayerStrength(scene) {
 // Spawn pressure in 0..1 based on time(80%) + player strength(20%).
 export function getSpawnPressure(scene) {
   const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
-  const horizon = Math.max(1, GAME_TIME_LIMIT_SEC || 1800);
-  const timeProgress = Phaser.Math.Clamp(elapsed / horizon, 0, 1);
+  const horizon = Math.max(1, DIFFICULTY_HORIZON_SEC || 900);
+  const timeProgress = Phaser.Math.Clamp(Math.min(elapsed, horizon) / horizon, 0, 1);
   const strength = getPlayerStrength(scene);
-  return Phaser.Math.Clamp(timeProgress * 0.8 + strength * 0.2, 0, 1);
+  const basePressure = timeProgress * 0.8 + strength * 0.2;
+  if (elapsed < ENDLESS_START_SEC) {
+    return Phaser.Math.Clamp(basePressure, 0, 1);
+  }
+  const endlessMinutes = (elapsed - ENDLESS_START_SEC) / 60;
+  const endlessBonus = Math.min(0.08, endlessMinutes * 0.008);
+  return Phaser.Math.Clamp(basePressure + endlessBonus, 0, 1);
 }
 
 export function updateDifficultyScaling(scene) {

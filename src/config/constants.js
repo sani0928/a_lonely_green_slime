@@ -3,7 +3,7 @@ export const GAME_VERSION = "0.9.3";
 
 // Dev mode flag.
 // Enables debug overlays/hotkeys only and must not alter gameplay balance.
-export const DEV_MODE = false;
+export const DEV_MODE = true;
 
 // Rendering mode.
 // true: use pixel sprite sheets.
@@ -25,7 +25,7 @@ export const PLAYER_BASE_ATTACK = 10;
 // Attack upgrade progression (20 steps, total +138 => final attack 148)
 export const ATTACK_UPGRADE_MAX = 20;
 export const ATTACK_UPGRADE_AMOUNTS = [
-  8, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 8, 8, 9, 9,
+  6, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7,
 ];
 
 // Enemies
@@ -79,11 +79,13 @@ export const INITIAL_ITEM_KILL_THRESHOLD = 20;
 export const ITEM_SPAWN_MARGIN = 120;
 
 export const DAMAGE_INVINCIBLE_DURATION_MS = 1500;
-export const GAME_TIME_LIMIT_SEC = 30 * 60;
+export const CLEAR_TIME_SEC = 15 * 60;
+export const ENDLESS_START_SEC = CLEAR_TIME_SEC;
+export const DIFFICULTY_HORIZON_SEC = CLEAR_TIME_SEC;
 
 // 3-phase difficulty system
-export const PHASE2_START_SEC = 10 * 60;
-export const PHASE3_START_SEC = 20 * 60;
+export const PHASE2_START_SEC = 5 * 60;
+export const PHASE3_START_SEC = 10 * 60;
 
 export const PHASE_GRID_TRANSITION_MS = 800;
 export const PHASE_GRID_COLOR_P1 = 0x2f7a4b;
@@ -105,13 +107,19 @@ export const PHASE_ENEMY_CAP_P1 = 200;
 export const PHASE_ENEMY_CAP_P2 = 400;
 export const PHASE_ENEMY_CAP_P3 = 600;
 
-export const PHASE_SPAWN_DELAY_MAX = { 1: 650, 2: 560, 3: 460 };
-export const PHASE_SPAWN_DELAY_MIN = { 1: 420, 2: 320, 3: 250 };
+export const PHASE_SPAWN_DELAY_MAX = { 1: 620, 2: 470, 3: 340 };
+export const PHASE_SPAWN_DELAY_MIN = { 1: 320, 2: 220, 3: 160 };
 
-export const PHASE_SPAWN_AMOUNT_BONUS = { 1: 0, 2: 1, 3: 2 };
+export const PHASE_SPAWN_AMOUNT_BONUS = { 1: 1, 2: 2, 3: 3 };
 
-export const PHASE_AGGRO_RADIUS_MULTIPLIER = { 1: 1.0, 2: 1.3, 3: 1.3 };
-export const PHASE_AGGRO_CHASE_SPEED_MULTIPLIER = { 1: 1.0, 2: 1.0, 3: 1.2 };
+export const PHASE_AGGRO_RADIUS_MULTIPLIER = { 1: 1.0, 2: 1.2, 3: 1.35 };
+export const PHASE_AGGRO_CHASE_SPEED_MULTIPLIER = { 1: 1.0, 2: 1.05, 3: 1.15 };
 
-export const SHOOTER_CAP_STEP_SEC = 5 * 60;
+export const SHOOTER_CAP_STEP_SEC = 150;
 export const SHOOTER_SPAWN_INTERVAL_SEC = 10;
+
+export const ENDLESS_CAP_STEP_SEC = 120;
+export const ENDLESS_CAP_STEP = 40;
+export const ENDLESS_CAP_MAX = 700;
+export const ENDLESS_CHASE_SPEED_MAX = 1.30;
+export const ENDLESS_SHOOTER_INTERVAL_SEC = 8;

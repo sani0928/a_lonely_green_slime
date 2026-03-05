@@ -6,12 +6,15 @@
   EXTRA_ENEMIES_CAP,
   ENEMY_CULL_DISTANCE,
   USE_PIXEL_SPRITES,
-  GAME_TIME_LIMIT_SEC,
+  CLEAR_TIME_SEC,
+  ENDLESS_START_SEC,
   SHOOTER_CAP_STEP_SEC,
   SHOOTER_SPAWN_INTERVAL_SEC,
   PHASE_SPAWN_AMOUNT_BONUS,
   PHASE_AGGRO_RADIUS_MULTIPLIER,
   PHASE_AGGRO_CHASE_SPEED_MULTIPLIER,
+  ENDLESS_CHASE_SPEED_MAX,
+  ENDLESS_SHOOTER_INTERVAL_SEC,
 } from "../config/constants.js";
 import {
   pickEnemyTier,
@@ -35,8 +38,14 @@ const TIER_TO_TYPES = {
 
 function getShooterTimeProgress(scene) {
   const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
-  const horizon = Math.max(1, GAME_TIME_LIMIT_SEC || 1800);
+  const horizon = Math.max(1, CLEAR_TIME_SEC || 900);
   return Phaser.Math.Clamp(elapsed / horizon, 0, 1);
+}
+
+function getEndlessMinutes(scene) {
+  const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
+  if (elapsed < ENDLESS_START_SEC) return 0;
+  return (elapsed - ENDLESS_START_SEC) / 60;
 }
 
 function pickEnemyType(scene) {
@@ -72,6 +81,11 @@ function pickSpawnType(scene) {
   const shootersNow = countEnemiesOfType(scene, "shooter");
   const now = scene.elapsedTime || 0;
   const maxShooters = getShooterCap(scene);
+  const endlessIntervalStartSec = 20 * 60;
+  const spawnIntervalSec =
+    now >= endlessIntervalStartSec
+      ? ENDLESS_SHOOTER_INTERVAL_SEC || 8
+      : SHOOTER_SPAWN_INTERVAL_SEC || 10;
 
   let enemyType = pickEnemyType(scene);
   if (shootersNow >= maxShooters) {
@@ -79,7 +93,7 @@ function pickSpawnType(scene) {
   }
 
   if (typeof scene.nextShooterSpawnAtSec !== "number") {
-    scene.nextShooterSpawnAtSec = now + (SHOOTER_SPAWN_INTERVAL_SEC || 20);
+    scene.nextShooterSpawnAtSec = now + spawnIntervalSec;
     return enemyType;
   }
 
@@ -89,7 +103,7 @@ function pickSpawnType(scene) {
     return enemyType;
   }
 
-  scene.nextShooterSpawnAtSec = now + (SHOOTER_SPAWN_INTERVAL_SEC || 20);
+  scene.nextShooterSpawnAtSec = now + spawnIntervalSec;
   return "shooter";
 }
 
@@ -142,7 +156,9 @@ function fireRangedShot(scene, enemy, player) {
 
   const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
   const progress = getShooterTimeProgress(scene);
-  const speed = 220 + (500 - 220) * progress;
+  const endlessMinutes = getEndlessMinutes(scene);
+  const endlessBonus = Math.min(40, endlessMinutes * 4);
+  const speed = 220 + (500 - 220) * progress + endlessBonus;
   const vx = Math.cos(angle) * speed;
   const vy = Math.sin(angle) * speed;
   proj.setVelocity(vx, vy);
@@ -151,8 +167,14 @@ function fireRangedShot(scene, enemy, player) {
 function initializeEnemyStats(scene, enemy, type, difficulty) {
   const cfg = ENEMY_TYPES[type] || {};
   const baseHpFromType = cfg.baseHp ?? ENEMY_BASE_HP;
+  const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
+  const earlyProgress = Phaser.Math.Clamp(elapsed / (CLEAR_TIME_SEC || 900), 0, 1);
+  const hpFactor = Phaser.Math.Linear(0.62, 0.82, earlyProgress);
+  const endlessHpBonus = Math.floor(getEndlessMinutes(scene) / 5) * 3;
   const rawHp =
-    baseHpFromType + ENEMY_HP_PER_DIFFICULTY * (Math.max(difficulty, 1) - 1);
+    baseHpFromType +
+    ENEMY_HP_PER_DIFFICULTY * hpFactor * (Math.max(difficulty, 1) - 1) +
+    endlessHpBonus;
   const hp = Math.max(10, Math.round(rawHp));
 
   enemy.setData("type", type);
@@ -343,6 +365,13 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
   const phase = getCurrentPhase(scene);
   const aggroRadiusMul = PHASE_AGGRO_RADIUS_MULTIPLIER[phase] ?? 1;
   const chaseSpeedMul = PHASE_AGGRO_CHASE_SPEED_MULTIPLIER[phase] ?? 1;
+  const endlessMinutes = getEndlessMinutes(scene);
+  const endlessChaseBonus = Phaser.Math.Clamp(endlessMinutes / 10, 0, 1);
+  const endlessChaseMul = Phaser.Math.Linear(
+    chaseSpeedMul,
+    ENDLESS_CHASE_SPEED_MAX || 1.3,
+    endlessChaseBonus
+  );
 
   const cellSize = GRID_CELL_SIZE;
   let grid;
@@ -426,7 +455,8 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
       if (now >= nextShotAt) {
         fireRangedShot(scene, enemy, player);
         const progress = getShooterTimeProgress(scene);
-        const cd = 3 + (2 - 3) * progress;
+        const endlessCdBonus = Math.min(0.25, endlessMinutes * 0.015);
+        const cd = Math.max(1.6, 3 + (2 - 3) * progress - endlessCdBonus);
         enemy.setData("nextShotAt", now + cd);
       }
     } else {
@@ -454,7 +484,7 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
           // Aggro: move directly toward player.
           dirX = Math.cos(baseAngle);
           dirY = Math.sin(baseAngle);
-          speedScale *= chaseSpeedMul;
+          speedScale *= endlessChaseMul;
         } else {
           // Roam: slowly wandering direction with jitter.
           let roamAngle = enemy.getData("monsters_behaviorRoamAngle");

@@ -14,7 +14,7 @@ import {
   CELL_BASE_ROTATION_SPEED,
   INITIAL_ITEM_KILL_THRESHOLD,
   DEV_MODE,
-  GAME_TIME_LIMIT_SEC,
+  CLEAR_TIME_SEC,
   PHASE2_START_SEC,
   PHASE3_START_SEC,
   USE_PIXEL_SPRITES,
@@ -89,6 +89,9 @@ export default class GameScene extends Phaser.Scene {
     this.playerHp = PLAYER_BASE_HP;
     this.playerAttackPower = PLAYER_BASE_ATTACK;
     this.isGameOver = false;
+    this.isClearAchieved = false;
+    this.clearAchievedAtSec = null;
+    this.clearAchievedAnnounced = false;
     this.elapsedTime = 0;
     this.playLogSent = false;
     this.playLogStartedAt = new Date().toISOString();
@@ -280,7 +283,7 @@ export default class GameScene extends Phaser.Scene {
     this.isPaused = false;
     this.isCountdownRunning = false;
 
-    this.timeRemaining = GAME_TIME_LIMIT_SEC;
+    this.timeRemaining = 0;
     HudSystem.createHud(this);
 
     const camera = this.cameras.main;
@@ -473,22 +476,28 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  showPhaseAlert(message) {
+  showPhaseAlert(message, styleOverride = null) {
     if (!message) return;
     if (this.phaseAlertText && this.phaseAlertText.destroy) {
       this.phaseAlertText.destroy();
       this.phaseAlertText = null;
     }
 
+    const resolvedStyle = {
+      fill: "#ffeb3b",
+      stroke: "#000000",
+      strokeThickness: 6,
+      ...(styleOverride || {}),
+    };
     const centerX = this.scale ? this.scale.width / 2 : 480;
     const centerY = this.scale ? this.scale.height / 2 : 270;
     const text = this.add
       .text(centerX, centerY, message, {
         fontFamily: "Mulmaru",
         fontSize: "40px",
-        fill: "#ffeb3b",
-        stroke: "#000000",
-        strokeThickness: 6,
+        fill: resolvedStyle.fill,
+        stroke: resolvedStyle.stroke,
+        strokeThickness: resolvedStyle.strokeThickness,
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -618,30 +627,31 @@ export default class GameScene extends Phaser.Scene {
     }
     this.updateDevDebugOverlay();
 
-    // Update and display remaining time (30:00 -> 00:00).
-    if (typeof GAME_TIME_LIMIT_SEC === "number" && this.timerText) {
-      const total = GAME_TIME_LIMIT_SEC;
-      const remaining = Math.max(0, Math.floor(total - this.elapsedTime));
-      this.timeRemaining = remaining;
-      const m = Math.floor(remaining / 60);
-      const s = remaining % 60;
+    // Update elapsed timer (00:00 -> death time).
+    if (this.timerText) {
+      const elapsed = Math.max(0, Math.floor(this.elapsedTime));
+      this.timeRemaining = elapsed;
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
       const text = `${m.toString().padStart(2, "0")}:${s
         .toString()
         .padStart(2, "0")}`;
       this.timerText.setText(text);
 
-      // Turn timer yellow only in the last 5 minutes (under 300 seconds).
-      if (remaining < 300) {
-        this.timerText.setFill("#ffeb3b");
+      if (elapsed >= CLEAR_TIME_SEC) {
+        this.timerText.setFill("#66bb6a");
       } else {
         this.timerText.setFill("#ffffff");
       }
 
-      // Auto-end the run as clear when time reaches zero.
-      if (remaining <= 0) {
-        this.endGame(true);
-        return;
+      if (!this.isClearAchieved && this.elapsedTime >= CLEAR_TIME_SEC) {
+        this.isClearAchieved = true;
+        this.clearAchievedAtSec = this.elapsedTime;
       }
+    }
+    if (this.isClearAchieved && !this.clearAchievedAnnounced) {
+      this.clearAchievedAnnounced = true;
+      this.showPhaseAlert(t("overlay.clear"), { fill: "#66bb6a" });
     }
 
     // Increase badge slots by +1 every 5 minutes (up to the max).
@@ -719,8 +729,9 @@ export default class GameScene extends Phaser.Scene {
     }
     this.isGameOver = true;
 
+    const clearAchieved = this.isClearAchieved || isClear;
     const baseScore = this.score || 0;
-    const finalScore = isClear ? Math.round(baseScore * 1.5) : baseScore;
+    const finalScore = clearAchieved ? Math.round(baseScore * 1.5) : baseScore;
     this.score = finalScore;
 
     if (!this.playLogSent) {
@@ -737,7 +748,7 @@ export default class GameScene extends Phaser.Scene {
         shooter_projectile_hits: this.playLogStats?.shooterProjectileHits || 0,
         kills_total: this.killCount || 0,
         final_score: finalScore,
-        is_clear: !!isClear,
+        is_clear: !!clearAchieved,
         snapshots: this.playLogSnapshots || [],
       }).catch(() => {});
     }
@@ -751,7 +762,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (this.sound && this.sound.play) {
-      if (isClear) {
+      if (clearAchieved) {
         this.sound.play("sfx_clear", { volume: 0.8 });
       } else {
         this.sound.play("sfx_game_over", { volume: 0.8 });
@@ -759,7 +770,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (typeof window.showGameOverOverlay === "function") {
-      window.showGameOverOverlay(finalScore, isClear, baseScore);
+      window.showGameOverOverlay(finalScore, clearAchieved, baseScore);
     }
   }
 }

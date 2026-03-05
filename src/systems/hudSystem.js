@@ -3,7 +3,6 @@ import {
   PLAYER_MAX_HP_CAP,
   CELL_MAX_COUNT,
   ATTACK_UPGRADE_MAX,
-  GAME_TIME_LIMIT_SEC,
 } from "../config/constants.js";
 import * as BadgeSystem from "./badgeSystem.js";
 import { getNextBadgeSlotUnlockRemaining } from "../ui/badgeSlotsUi.js";
@@ -201,7 +200,7 @@ export function createHud(scene) {
   scene.killsText = scene.killsValueText;
 
   scene.timerText = scene.add
-    .text(width / 2, 8, "30:00", {
+    .text(width / 2, 8, "00:00", {
       fontFamily: "Mulmaru",
       fontSize: "28px",
       fill: "#ffffff",

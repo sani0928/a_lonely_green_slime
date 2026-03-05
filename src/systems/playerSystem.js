@@ -163,7 +163,7 @@ export function showHpHeal(scene, amount) {
   if (!healValue) return;
 
   if (scene.sound && scene.sound.play) {
-    scene.sound.play("sfx_heal", { volume: 0.8 });
+    scene.sound.play("sfx_heal", { volume: 0.6 });
   }
 
   const text = scene.add

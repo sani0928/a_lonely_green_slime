@@ -46,7 +46,7 @@
 | `shooter_projectile_hits` | unsigned int | shooter 발사체 피격 횟수 |
 | `kills_total` | unsigned int | 총 처치 수 |
 | `final_score` | int | 최종 점수 |
-| `is_clear` | bool | 30분 클리어 여부 |
+| `is_clear` | bool | 15분 도달(클리어 달성) 여부 |
 | `snapshots` | JSON | 1분 단위 스냅샷 배열 |
 | `created_at` | datetime | 서버 저장 시각 |
 

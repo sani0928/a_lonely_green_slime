@@ -77,6 +77,12 @@ export function equipBadgeAtSlot(scene, badgeId, slotIndex) {
     scene.badgesOwned.push(badgeId);
   }
 
+  // Regen timing should start from the equip moment, not total run elapsed time.
+  if (badgeId === "regen") {
+    scene.regenLastHealTime =
+      typeof scene.elapsedTime === "number" ? scene.elapsedTime : 0;
+  }
+
   // 장착/교체 후, 배지 보너스에 따라 HP/탄환 최대 한도 재계산
   recalcCapsFromBadges(scene);
   updatePlayerScaleFromBadges(scene);
