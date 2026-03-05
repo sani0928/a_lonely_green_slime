@@ -3,7 +3,7 @@ export const GAME_VERSION = "0.9.3";
 
 // Dev mode flag.
 // Enables debug overlays/hotkeys only and must not alter gameplay balance.
-export const DEV_MODE = true;
+export const DEV_MODE = false;
 
 // Rendering mode.
 // true: use pixel sprite sheets.
@@ -58,13 +58,13 @@ export const ENEMY_HP_PER_DIFFICULTY = 11;
 
 // Enemy catalog
 export const ENEMY_TYPES = {
-  runner: { baseHp: 21, score: 10, speedMultiplier: 1.15, tier: "weak" },
-  mite: { baseHp: 15, score: 10, speedMultiplier: 1.3, tier: "weak" },
-  grunt: { baseHp: 35, score: 20, speedMultiplier: 1, tier: "mid" },
-  soldier: { baseHp: 43, score: 20, speedMultiplier: 0.9, tier: "mid" },
-  shooter: { baseHp: 37, score: 50, speedMultiplier: 0.85, tier: "mid" },
-  brute: { baseHp: 65, score: 30, speedMultiplier: 0.8, tier: "strong" },
-  titan: { baseHp: 87, score: 30, speedMultiplier: 0.6, tier: "strong" },
+  runner: { baseHp: 23, score: 10, speedMultiplier: 1.15, tier: "weak" },
+  mite: { baseHp: 17, score: 10, speedMultiplier: 1.3, tier: "weak" },
+  grunt: { baseHp: 37, score: 20, speedMultiplier: 1, tier: "mid" },
+  soldier: { baseHp: 45, score: 20, speedMultiplier: 0.9, tier: "mid" },
+  shooter: { baseHp: 39, score: 50, speedMultiplier: 0.85, tier: "mid" },
+  brute: { baseHp: 67, score: 30, speedMultiplier: 0.8, tier: "strong" },
+  titan: { baseHp: 89, score: 30, speedMultiplier: 0.6, tier: "strong" },
 };
 
 // Cells
