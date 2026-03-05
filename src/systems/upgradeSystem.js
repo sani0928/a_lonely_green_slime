@@ -409,7 +409,7 @@ export function onPlayerPickupCoin(scene, player, coin) {
   }
 
   if (scene.sound && scene.sound.play) {
-    scene.sound.play("sfx_pickup", { volume: 0.7 });
+    scene.sound.play("sfx_pickup", { volume: 0.2 });
   }
 }
 

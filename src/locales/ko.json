@@ -14,6 +14,9 @@
     "no": "아니오",
     "skip": "건너뛰기",
     "again": "한 번 더",
+    "bgm": "BGM",
+    "on": "켜짐",
+    "off": "꺼짐",
     "lockedSlot": "잠긴 슬롯",
     "emptySlot": "빈 슬롯",
     "nextBadgeSlotIn": "다음 뱃지 슬롯 개방까지 {{time}}"
@@ -27,7 +30,7 @@
     "guideTabIntro": "게임 소개",
     "guideTabBadges": "뱃지 목록",
     "guideStory": "픽셀 세계에 홀로 남은 초록 슬라임.\n끝없이 몰려오는 몬스터를 피하고, 세포로 막아 내며 살아남아야 한다.\n슬라임 조각과 뱃지를 모아 강해져서 30분만 버티면 탈출할 수 있다!!",
-    "guideGoal": "목표\n• 최대한 오래 살아남아 30분을 버티면 보너스 점수가 주어진다.\n• 최종 점수는 리더보드에 등록하여 다른 유저들과 공유할 수 있다.",
+    "guideGoal": "목표\n• 최대한 많은 점수를 획득하자. (30분을 채우면 1.5배 보너스!)\n• 최종 점수는 리더보드에 등록하여 다른 유저들과 공유할 수 있다.",
     "guideControls": "조작\n• WASD 또는 방향키: 상하좌우 이동\n• ESC: 일시정지 및 뱃지 슬롯",
     "guideCombat": "전투\n• 슬라임 주위를 도는 세포가 가까운 적을 자동 공격\n• 적 처치 시 코인 드랍 → 점수\n• 피격 시 HP 감소하며 일정 시간 무적",
     "guideGrowth": "성장\n• 슬라임 조각: 몬스터를 처치하면 맵에 등장하며 업그레이드 또는 뱃지 뽑기를 할 수 있다.\n• 뱃지: 빈 슬롯 혹은 기존 뱃지와 교체하여 장착. 장착하는 동안 뱃지의 효과가 발동된다."
@@ -38,8 +41,9 @@
     "en": "EN",
     "ko": "KO",
     "resumeCountdown": "게임 재개 시 카운트다운",
-    "resumeNormal": "3.. 2.. 1..",
-    "resumeFast": "3,2,1",
+    "resumeSlow": "3.. 2.. 1..",
+    "resumeNormal": "3,2,1",
+    "resumeFast": "빠름",
     "attackSound": "타격음",
     "attackSound1": "1",
     "attackSound2": "2",
@@ -185,14 +189,6 @@
     "smaller": {
       "name": "작아져볼게 얍",
       "description": "슬라임이 **약간** 작아집니다."
-    },
-    "magnetic": {
-      "name": "끌어당김의 법칙",
-      "description": "**코인**이 슬라임에게 끌려옵니다."
-    },
-    "compass": {
-      "name": "네비게이션",
-      "description": "화살표가 슬라임 조각 상자의 **위치**를 안내합니다."
     }
   },
   "phaseAlert": {

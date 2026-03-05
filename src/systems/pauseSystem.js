@@ -4,6 +4,14 @@ import { pauseInvincibility, resumeInvincibility } from "./playerSystem.js";
 
 const COUNTDOWN_INTERVAL_NORMAL_MS = 1000;
 
+function getResumeCountdownMode() {
+  const raw = getSettings().resume_counting_speed;
+  if (raw === "slow") return "slow";
+  if (raw === "normal") return "normal";
+  if (raw === "fast") return "normal";
+  return "normal";
+}
+
 export function createPauseOverlay(scene) {
   const { width, height } = scene.scale;
 
@@ -84,9 +92,9 @@ export function startResumeCountdown(scene) {
   }
 
   const countdownIntervalMs =
-    getSettings().resume_counting_speed === "fast"
-      ? COUNTDOWN_INTERVAL_NORMAL_MS / 2
-      : COUNTDOWN_INTERVAL_NORMAL_MS;
+    getResumeCountdownMode() === "slow"
+      ? COUNTDOWN_INTERVAL_NORMAL_MS
+      : COUNTDOWN_INTERVAL_NORMAL_MS / 2;
   const scaleTweenDuration = Math.max(80, Math.round(200 * (countdownIntervalMs / 1000)));
 
   let count = 3;

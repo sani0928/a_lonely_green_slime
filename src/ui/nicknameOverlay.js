@@ -84,7 +84,11 @@ export function showNicknameOverlay(scene) {
     // 오버레이가 없으면 닉네임 없이 바로 시작
     currentNicknameForSubmit = "";
     if (scene && scene.scene) {
-      scene.scene.start("MainScene", { nicknameForSubmit: "" });
+      if (typeof scene.startGameWithMenuFade === "function") {
+        scene.startGameWithMenuFade({ nicknameForSubmit: "" });
+      } else {
+        scene.scene.start("MainScene", { nicknameForSubmit: "" });
+      }
     }
     return;
   }
@@ -138,11 +142,15 @@ export function showNicknameOverlay(scene) {
       currentNicknameForSubmit = "";
       if (scene && scene.sound && scene.sound.play) {
         try {
-          scene.sound.play("sfx_play", { volume: 0.9 });
+          scene.sound.play("sfx_play", { volume: 0.5 });
         } catch (_) {}
       }
       closeOverlay({ reenableMenu: false });
-      scene.scene.start("MainScene", { nicknameForSubmit: "" });
+      if (typeof scene.startGameWithMenuFade === "function") {
+        scene.startGameWithMenuFade({ nicknameForSubmit: "" });
+      } else {
+        scene.scene.start("MainScene", { nicknameForSubmit: "" });
+      }
       return;
     }
     const raw = input.value || "";
@@ -173,11 +181,15 @@ export function showNicknameOverlay(scene) {
 
     if (scene && scene.sound && scene.sound.play) {
       try {
-        scene.sound.play("sfx_play", { volume: 0.9 });
+        scene.sound.play("sfx_play", { volume: 0.5 });
       } catch (_) {}
     }
     closeOverlay({ reenableMenu: false });
-    scene.scene.start("MainScene", { nicknameForSubmit: currentNicknameForSubmit });
+    if (typeof scene.startGameWithMenuFade === "function") {
+      scene.startGameWithMenuFade({ nicknameForSubmit: currentNicknameForSubmit });
+    } else {
+      scene.scene.start("MainScene", { nicknameForSubmit: currentNicknameForSubmit });
+    }
   }
 
   // 버튼/입력 이벤트는 호출할 때마다 최신 scene/closeOverlay/handleConfirm 를 참조하도록 덮어쓴다.
@@ -261,4 +273,3 @@ export function showNicknameOverlay(scene) {
     input.select();
   }
 }
-

@@ -16,9 +16,10 @@ const ATTACK_SOUND_1_ID = "settings-attack-sound-1";
 const ATTACK_SOUND_2_ID = "settings-attack-sound-2";
 const ATTACK_SOUND_3_ID = "settings-attack-sound-3";
 
-const RESUME_SPEED_VALUES = ["normal", "fast"];
+const RESUME_SPEED_VALUES = ["slow", "normal"];
 function getResumeCountdownSpeed() {
   const v = getSettings().resume_counting_speed;
+  if (v === "fast") return "normal";
   return RESUME_SPEED_VALUES.includes(v) ? v : "normal";
 }
 
@@ -55,8 +56,8 @@ function updateOverlayTexts() {
   if (enBtn) enBtn.textContent = t("settings.en");
   if (koBtn) koBtn.textContent = t("settings.ko");
   if (resumeLabel) resumeLabel.textContent = t("settings.resumeCountdown");
-  if (resumeNormalBtn) resumeNormalBtn.textContent = t("settings.resumeNormal");
-  if (resumeFastBtn) resumeFastBtn.textContent = t("settings.resumeFast");
+  if (resumeNormalBtn) resumeNormalBtn.textContent = t("settings.resumeSlow");
+  if (resumeFastBtn) resumeFastBtn.textContent = t("settings.resumeNormal");
   if (attackSoundLabel) attackSoundLabel.textContent = t("settings.attackSound");
   if (attack1Btn) attack1Btn.textContent = t("settings.attackSound1");
   if (attack2Btn) attack2Btn.textContent = t("settings.attackSound2");
@@ -67,8 +68,8 @@ function updateActiveResumeSpeed() {
   const cur = getResumeCountdownSpeed();
   const normalBtn = getEl(RESUME_NORMAL_ID);
   const fastBtn = getEl(RESUME_FAST_ID);
-  if (normalBtn) normalBtn.classList.toggle("active", cur === "normal");
-  if (fastBtn) fastBtn.classList.toggle("active", cur === "fast");
+  if (normalBtn) normalBtn.classList.toggle("active", cur === "slow");
+  if (fastBtn) fastBtn.classList.toggle("active", cur === "normal");
 }
 
 function updateActiveLang() {
@@ -136,7 +137,7 @@ export function showSettingsOverlay(scene) {
     const onResumeSpeedClick = (e) => {
       const btn = e.currentTarget;
       const speed = btn && btn.dataset && btn.dataset.speed;
-      if (speed !== "normal" && speed !== "fast") return;
+      if (speed !== "slow" && speed !== "normal") return;
       setSetting("resume_counting_speed", speed);
       updateActiveResumeSpeed();
     };

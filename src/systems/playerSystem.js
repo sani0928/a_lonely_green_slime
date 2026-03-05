@@ -85,7 +85,7 @@ export function onPlayerHitByEnemy(scene, player, enemy, hitMeta = null) {
 
   if (damage > 0) {
     if (scene.sound && scene.sound.play) {
-      scene.sound.play("sfx_hit", { volume: 0.8 });
+      scene.sound.play("sfx_hit", { volume: 0.3 });
     }
     if (typeof scene.showHpDamage === "function") {
       scene.showHpDamage(damage);

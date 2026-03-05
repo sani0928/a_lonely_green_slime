@@ -1,12 +1,9 @@
-/** 자석(Magnetic) 뱃지: 반경 내 코인 끌어당김 */
-import * as BadgeSystem from "./badgeSystem.js";
+/** Coin magnet effect: pull nearby coins toward the player. */
 
-const BASE_RADIUS = 200;
-const PULL_SPEED = 500;
+const BASE_RADIUS = 150;
+const PULL_SPEED = 450;
 
 export function applyMagnetEffects(scene, dt) {
-  if (!BadgeSystem.hasBadge(scene, "magnetic")) return;
-
   const player = scene.player;
   if (!player || !scene.coins) return;
 

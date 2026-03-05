@@ -4,6 +4,7 @@
 *.swp
 *.swo
 *~
+AGENTS.md
 
 # Python (Django backend)
 backend/.venv/

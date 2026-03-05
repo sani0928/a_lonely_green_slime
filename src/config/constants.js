@@ -1,5 +1,5 @@
 ﻿// Game version shown in UI.
-export const GAME_VERSION = "0.9.2";
+export const GAME_VERSION = "0.9.3";
 
 // Dev mode flag.
 // Enables debug overlays/hotkeys only and must not alter gameplay balance.

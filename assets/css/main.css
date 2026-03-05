@@ -624,7 +624,7 @@ canvas {
   color: #9e9e9e;
 }
 .guide-badge-desc strong {
-  color: #bdbdbd;
+  color: #81c784;
 }
 .guide-badge-rarity-block[data-rarity="unique"] .guide-badge-rarity-title { color: #ffd54f; }
 .guide-badge-rarity-block[data-rarity="epic"] .guide-badge-rarity-title { color: #ce93d8; }
@@ -921,6 +921,13 @@ canvas {
 }
 #pause-overlay .pause-buttons .secondary-btn {
   min-width: 100px;
+}
+#pause-btn-bgm {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  min-width: 110px;
+  z-index: 2;
 }
 
 /* === Pause confirm (to main / end game) === */

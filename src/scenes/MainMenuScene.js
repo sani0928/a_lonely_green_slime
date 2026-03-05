@@ -8,6 +8,14 @@ import { t, getSfxAttackKey } from "../i18n.js";
 import { showSettingsOverlay } from "../ui/settingsOverlay.js";
 import { showGuideOverlay } from "../ui/guideOverlay.js";
 import { showNicknameOverlay } from "../ui/nicknameOverlay.js";
+import {
+  applyBgmEnabled,
+  getBgmEnabled,
+  getBgmToggleLabel,
+  playSceneBgm,
+  resumeAudioContext,
+  stopSceneBgm,
+} from "../systems/bgmSystem.js";
 
 const WANDER_SPEED = 28;
 const FLEE_SPEED = 160;
@@ -101,6 +109,7 @@ export default class MainMenuScene extends Phaser.Scene {
     this.load.audio("sfx_attack_2", "assets/audio/attack2.wav");
     this.load.audio("sfx_attack_3", "assets/audio/attack3.wav");
     this.load.audio("sfx_play", "assets/audio/play.wav");
+    this.load.audio("bgm_menu", "assets/audio/mainmenu_bgm.mp3");
   }
 
   create() {
@@ -129,6 +138,30 @@ export default class MainMenuScene extends Phaser.Scene {
       .setStroke("#0a0a0a", 6)
       .setDepth(2);
     title.setShadow(2, 2, "#000000", 4, true);
+
+    this.menuBgmToggleText = this.add
+      .text(width - 14, height - 14, getBgmToggleLabel(), {
+        fontFamily: "Mulmaru",
+        fontSize: "18px",
+        color: "#f5f5f5",
+        backgroundColor: "rgba(0, 0, 0, 0.45)",
+        padding: { left: 10, right: 10, top: 6, bottom: 6 },
+      })
+      .setOrigin(1, 1)
+      .setScrollFactor(0)
+      .setDepth(110)
+      .setInteractive({ useHandCursor: true });
+
+    this.menuBgmToggleText.on("pointerdown", async (pointer) => {
+      pointer?.event?.stopPropagation?.();
+      await resumeAudioContext(this);
+      const next = !getBgmEnabled();
+      applyBgmEnabled(this, next);
+      this.updateMenuBgmToggleText();
+    });
+
+    playSceneBgm(this, "bgm_menu");
+    this.bindBgmGestureUnlock();
 
     // Start / Settings 버튼 (크기 통일, 간격 축소)
     const btnW = 200;
@@ -298,6 +331,13 @@ export default class MainMenuScene extends Phaser.Scene {
         }
       }
     }
+
+    this.events.once("shutdown", () => {
+      stopSceneBgm(this, 0);
+    });
+    this.events.once("destroy", () => {
+      stopSceneBgm(this, 0);
+    });
   }
 
   /**
@@ -561,5 +601,30 @@ export default class MainMenuScene extends Phaser.Scene {
       m.guideBg.clear();
       drawPixelButton(m.guideBg, m.setX, m.guideY, m.btnW, m.btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
     }
+  }
+
+  updateMenuBgmToggleText() {
+    if (!this.menuBgmToggleText) return;
+    this.menuBgmToggleText.setText(getBgmToggleLabel());
+  }
+
+  bindBgmGestureUnlock() {
+    if (this._bgmGestureBound) return;
+    this._bgmGestureBound = true;
+
+    const ensurePlayback = async () => {
+      await resumeAudioContext(this);
+      playSceneBgm(this, "bgm_menu");
+    };
+
+    this.input.once("pointerdown", ensurePlayback);
+    this.input.keyboard.once("keydown", ensurePlayback);
+  }
+
+  startGameWithMenuFade(data = {}) {
+    stopSceneBgm(this, 300);
+    this.time.delayedCall(320, () => {
+      this.scene.start("MainScene", data);
+    });
   }
 }

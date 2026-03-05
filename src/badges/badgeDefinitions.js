@@ -152,22 +152,6 @@ export const BADGES = [
     category: "mobility",
     maxStacks: 1,
   },
-  {
-    id: "magnetic",
-    name: "Magnetic",
-    description: "**Coins** are pulled toward you.",
-    rarity: "normal",
-    category: "utility",
-    maxStacks: 1,
-  },
-  {
-    id: "compass",
-    name: "Compass",
-    description: "Arrow points to a fragment chest **location**.",
-    rarity: "normal",
-    category: "utility",
-    maxStacks: 1,
-  },
 ];
 
 export function getBadgeById(id) {

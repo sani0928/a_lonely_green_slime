@@ -61,4 +61,8 @@ export function preloadGame(scene) {
   scene.load.audio("sfx_pickup_fragment", "assets/audio/pickup_fragment.wav");
   scene.load.audio("sfx_heal", "assets/audio/heal.wav");
   scene.load.audio("sfx_hit", "assets/audio/hit.wav");
+
+  scene.load.audio("bgm_game_phase1", "assets/audio/game_bgm_phase1.mp3");
+  scene.load.audio("bgm_game_phase2", "assets/audio/game_bgm_phase2.mp3");
+  scene.load.audio("bgm_game_phase3", "assets/audio/game_bgm_phase3.mp3");
 }

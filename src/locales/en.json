@@ -14,6 +14,9 @@
     "no": "No",
     "skip": "Skip",
     "again": "Again",
+    "bgm": "BGM",
+    "on": "ON",
+    "off": "OFF",
     "lockedSlot": "Locked slot",
     "emptySlot": "Empty slot",
     "nextBadgeSlotIn": "Next badge slot in {{time}}"
@@ -27,7 +30,7 @@
     "guideTabIntro": "Game intro",
     "guideTabBadges": "Badge list",
     "guideStory": "A lone green slime in a pixel world.\nEndless monsters close in—dodge and fight back with your cells to survive.\nGrow stronger with fragments and badges, last 30 minutes to escape!!",
-    "guideGoal": "Goal\n• Survive as long as you can. Last 30 minutes to earn a score bonus.\n• Submit your final score to the leaderboard and share with other players.",
+    "guideGoal": "Goal\n• Earn as many points as possible. (Fill the full 30 minutes for a 1.5x bonus!)\n• Submit your final score to the leaderboard and share with other players.",
     "guideControls": "Controls\n• WASD or Arrow keys: Move\n• ESC: Pause and badge slots",
     "guideCombat": "Combat\n• Cells orbiting the slime auto-attack nearby enemies.\n• Defeated enemies drop coins → score.\n• Taking damage reduces HP; brief invincibility after hit.",
     "guideGrowth": "Growth\n• Fragments: Dropped by defeated monsters. Use them for upgrades or badge draw.\n• Badges: Equip in empty slots or replace existing badges. Effects apply while equipped."
@@ -38,8 +41,9 @@
     "en": "EN",
     "ko": "KO",
     "resumeCountdown": "Resume countdown",
-    "resumeNormal": "3.. 2.. 1..",
-    "resumeFast": "3,2,1",
+    "resumeSlow": "3.. 2.. 1..",
+    "resumeNormal": "3,2,1",
+    "resumeFast": "Fast",
     "attackSound": "Attack sound",
     "attackSound1": "1",
     "attackSound2": "2",
@@ -185,14 +189,6 @@
     "smaller": {
       "name": "Smaller",
       "description": "Character becomes **slightly** smaller."
-    },
-    "magnetic": {
-      "name": "Magnetic",
-      "description": "**Coins** are pulled toward you."
-    },
-    "compass": {
-      "name": "Compass",
-      "description": "Arrow points to a fragments **location**."
     }
   },
   "phaseAlert": {

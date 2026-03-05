@@ -5,6 +5,12 @@ import { BADGES } from "../badges/badgeDefinitions.js";
 import { t, formatBold } from "../i18n.js";
 import { getDashboardStatsForOverlay } from "../systems/hudSystem.js";
 import { getNicknameForSubmit } from "./nicknameOverlay.js";
+import {
+  applyBgmEnabled,
+  getBgmEnabled,
+  getBgmToggleLabel,
+  resumeAudioContext,
+} from "../systems/bgmSystem.js";
 
 let overlayTextsRefreshFn = null;
 
@@ -52,6 +58,7 @@ export function setupOverlayCallbacks(phaserGame) {
   const pauseBadgeSlotsContainer = document.getElementById("pause-badge-slots");
   const pauseBtnMain = document.getElementById("pause-btn-main");
   const pauseBtnQuit = document.getElementById("pause-btn-quit");
+  const pauseBtnBgm = document.getElementById("pause-btn-bgm");
   const pauseConfirmEl = document.getElementById("pause-confirm");
   const pauseConfirmMsg = document.getElementById("pause-confirm-msg");
   const pauseConfirmYes = document.getElementById("pause-confirm-yes");
@@ -93,6 +100,7 @@ export function setupOverlayCallbacks(phaserGame) {
     if (pauseSubEl) pauseSubEl.textContent = t("pause.pressEscToResume");
     if (pauseBtnMain) pauseBtnMain.textContent = t("pause.toMain");
     if (pauseBtnQuit) pauseBtnQuit.textContent = t("pause.quitGame");
+    if (pauseBtnBgm) pauseBtnBgm.textContent = getBgmToggleLabel();
     if (pauseConfirmYes) pauseConfirmYes.textContent = t("common.yes");
     if (pauseConfirmNo) pauseConfirmNo.textContent = t("common.no");
   }
@@ -767,6 +775,18 @@ export function setupOverlayCallbacks(phaserGame) {
       });
     });
   }
+  if (pauseBtnBgm) {
+    pauseBtnBgm.addEventListener("click", async () => {
+      const scene =
+        currentPauseScene ||
+        (phaserGame && phaserGame.scene && phaserGame.scene.getScene("MainScene"));
+      if (!scene) return;
+      await resumeAudioContext(scene);
+      const next = !getBgmEnabled();
+      applyBgmEnabled(scene, next);
+      pauseBtnBgm.textContent = getBgmToggleLabel();
+    });
+  }
   if (pauseConfirmYes) {
     pauseConfirmYes.addEventListener("click", () => {
       if (typeof pauseConfirmOnYes === "function") pauseConfirmOnYes();
@@ -793,6 +813,7 @@ export function setupOverlayCallbacks(phaserGame) {
     }
     if (pauseBtnMain) pauseBtnMain.textContent = t("pause.toMain");
     if (pauseBtnQuit) pauseBtnQuit.textContent = t("pause.quitGame");
+    if (pauseBtnBgm) pauseBtnBgm.textContent = getBgmToggleLabel();
     pauseOverlay.classList.add("visible");
   };
 
@@ -804,4 +825,3 @@ export function setupOverlayCallbacks(phaserGame) {
   window.isPauseConfirmVisible = () =>
     !!(pauseConfirmEl && pauseConfirmEl.classList.contains("visible"));
 }
-

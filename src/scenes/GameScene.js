@@ -53,6 +53,11 @@ import {
   submitPlayLog,
 } from "../api/scoreApi.js";
 import { t } from "../i18n.js";
+import {
+  playSceneBgm,
+  stopSceneBgm,
+  switchSceneBgm,
+} from "../systems/bgmSystem.js";
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -153,6 +158,7 @@ export default class GameScene extends Phaser.Scene {
       this.currentMajorGridWave.color,
       this.currentMajorGridWave.width
     );
+    playSceneBgm(this, "bgm_game_phase1");
     // Build coin frame indices when pixel coin sheet exists.
     this.coinFrames = null;
     if (USE_PIXEL_SPRITES) {
@@ -312,6 +318,13 @@ export default class GameScene extends Phaser.Scene {
     if (DEV_MODE) {
       this.setupDevDebugTools();
     }
+
+    this.events.once("shutdown", () => {
+      stopSceneBgm(this, 0);
+    });
+    this.events.once("destroy", () => {
+      stopSceneBgm(this, 0);
+    });
     // Toggle pause with ESC (also available during upgrade selection).
     this.input.keyboard.on("keydown-ESC", () => {
       if (this.isGameOver) return;
@@ -418,8 +431,10 @@ export default class GameScene extends Phaser.Scene {
 
     if (nextPhase === 2) {
       this.showPhaseAlert(t("phaseAlert.phase2"));
+      switchSceneBgm(this, "bgm_game_phase2", 800);
     } else if (nextPhase === 3) {
       this.showPhaseAlert(t("phaseAlert.phase3"));
+      switchSceneBgm(this, "bgm_game_phase3", 800);
     }
 
     if (this.bgGridTransitionTween) {
@@ -730,6 +745,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.player) {
       this.player.setVelocity(0, 0);
     }
+    stopSceneBgm(this, 250);
     if (this.enemies) {
       this.enemies.clear(true, true);
     }
