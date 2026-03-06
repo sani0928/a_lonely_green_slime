@@ -1,32 +1,41 @@
-/** ?ìˆ˜ ?œì¶œÂ·ë¦¬ë”ë³´ë“œ API */
+ï»¿/** Score/leaderboard API helpers */
 const API_BASE_URL =
   window.GAME_API_BASE_URL || "http://localhost:8000";
-const ANONYMOUS_ID_KEY = "als_anonymous_id";
-const ANONYMOUS_SEQ_KEY = "als_anonymous_seq";
-const RUN_SEQ_KEY = "als_run_seq";
 
-function toPositiveInt(value, fallback = 0) {
-  const n = Number.parseInt(String(value ?? ""), 10);
-  if (!Number.isFinite(n) || n < 0) return fallback;
-  return n;
+const ANONYMOUS_ID_KEY = "als_anonymous_id";
+const LEGACY_ANONYMOUS_SEQ_KEY = "als_anonymous_seq";
+const LEGACY_RUN_SEQ_KEY = "als_run_seq";
+
+function makeUniqueId(prefix) {
+  try {
+    if (typeof crypto !== "undefined" && crypto && crypto.randomUUID) {
+      return `${prefix}_${crypto.randomUUID()}`;
+    }
+  } catch (_) {
+    // Fallback below
+  }
+
+  const ts = Date.now().toString(36);
+  const rand = Math.random().toString(36).slice(2, 12);
+  return `${prefix}_${ts}_${rand}`;
 }
 
 function makeAnonymousId() {
-  try {
-    const seq = toPositiveInt(localStorage.getItem(ANONYMOUS_SEQ_KEY), 0) + 1;
-    localStorage.setItem(ANONYMOUS_SEQ_KEY, String(seq));
-    return `anon_${seq}`;
-  } catch (_) {
-    return `anon_${Date.now()}`;
-  }
+  return makeUniqueId("anon");
+}
+
+function isLegacyAnonymousId(value) {
+  return /^anon_\d+$/.test(String(value || ""));
 }
 
 export function getOrCreateAnonymousId() {
   try {
     const existing = localStorage.getItem(ANONYMOUS_ID_KEY);
-    if (existing) return existing;
+    if (existing && !isLegacyAnonymousId(existing)) return existing;
+
     const generated = makeAnonymousId();
     localStorage.setItem(ANONYMOUS_ID_KEY, generated);
+    localStorage.removeItem(LEGACY_ANONYMOUS_SEQ_KEY);
     return generated;
   } catch (_) {
     return makeAnonymousId();
@@ -35,12 +44,11 @@ export function getOrCreateAnonymousId() {
 
 export function getNextRunId() {
   try {
-    const seq = toPositiveInt(localStorage.getItem(RUN_SEQ_KEY), 0) + 1;
-    localStorage.setItem(RUN_SEQ_KEY, String(seq));
-    return `run_${seq}`;
+    localStorage.removeItem(LEGACY_RUN_SEQ_KEY);
   } catch (_) {
-    return `run_${Date.now()}`;
+    // ignore
   }
+  return makeUniqueId("run");
 }
 
 export async function submitScore(nickname, score) {
@@ -57,7 +65,7 @@ export async function submitScore(nickname, score) {
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     const message =
-      data && data.detail ? data.detail : "?ìˆ˜ ?±ë¡???¤íŒ¨?ˆìŠµ?ˆë‹¤.";
+      data && data.detail ? data.detail : "Failed to submit score.";
     throw new Error(message);
   }
 
@@ -93,7 +101,7 @@ export async function submitFeedback(content) {
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    const message = data?.detail || "?¼ë“œë°??„ì†¡???¤íŒ¨?ˆìŠµ?ˆë‹¤.";
+    const message = data?.detail || "Failed to send feedback.";
     throw new Error(message);
   }
   return response.json();
@@ -108,10 +116,8 @@ export async function submitPlayLog(payload) {
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    const message = data?.detail || "?Œë ˆ??ë¡œê·¸ ?„ì†¡???¤íŒ¨?ˆìŠµ?ˆë‹¤.";
+    const message = data?.detail || "Failed to submit playlog.";
     throw new Error(message);
   }
   return response.json();
 }
-
-
