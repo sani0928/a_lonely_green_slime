@@ -346,7 +346,11 @@ export function updateDashboard(scene) {
   }
 
   if (scene.items && scene.itemsValueText) {
-    const count = scene.items ? scene.items.countActive(true) : 0;
+    let count = 0;
+    scene.items.children.iterate((item) => {
+      if (!item || !item.active) return;
+      if (item.getData && item.getData("isFragment")) count += 1;
+    });
     const maxF = 3 + (BadgeSystem.getMaxFragmentBonus(scene) || 0);
     const fragmentsValueStr = `${count}/${maxF}`;
     updateStatWithBounce(scene, "fragments", scene.itemsValueText, fragmentsValueStr);

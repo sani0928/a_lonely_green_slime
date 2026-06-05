@@ -39,12 +39,22 @@ function getSkipScoreForBadge(badge) {
   return SKIP_SCORE_BY_RARITY[r] ?? SKIP_SCORE_BY_RARITY.normal;
 }
 
+function countActiveFragments(scene) {
+  if (!scene || !scene.items) return 0;
+  let count = 0;
+  scene.items.children.iterate((item) => {
+    if (!item || !item.active) return;
+    if (item.getData && item.getData("isFragment")) count += 1;
+  });
+  return count;
+}
+
 export function spawnUpgradeItem(scene) {
   if (!scene.worldWidth || !scene.worldHeight) return false;
 
   const baseMaxActive = 3;
   const maxActive = baseMaxActive + getMaxFragmentBonus(scene);
-  if (scene.items && scene.items.countActive(true) >= maxActive) {
+  if (countActiveFragments(scene) >= maxActive) {
     return false;
   }
 
@@ -134,6 +144,43 @@ export function spawnUpgradeItem(scene) {
       onComplete: () => notif.destroy(),
     });
   });
+
+  return true;
+}
+
+export function spawnPachinkoTicket(scene, x, y) {
+  if (!scene || !scene.items || !scene.items.create) return false;
+
+  const textureKey =
+    scene.textures && scene.textures.exists("pachinko_ticket")
+      ? "pachinko_ticket"
+      : "bullet";
+  const ticket = scene.items.create(x, y, textureKey);
+  if (!ticket || !ticket.body) return false;
+
+  ticket.setActive(true);
+  ticket.setVisible(true);
+  ticket.setDepth(9);
+  if (textureKey === "pachinko_ticket") {
+    ticket.setScale(0.72);
+  } else {
+    ticket.setScale(1.8);
+    ticket.setTint(0xffd54f);
+  }
+
+  if (ticket.body.setAllowGravity) {
+    ticket.body.setAllowGravity(false);
+  }
+  if (ticket.body.setCircle) {
+    if (textureKey === "pachinko_ticket") {
+      ticket.body.setCircle(22, 10, 2);
+    } else {
+      ticket.body.setCircle(5);
+    }
+  }
+
+  ticket.setData("isPachinkoTicket", true);
+  ticket.setData("spawnTime", scene.elapsedTime || 0);
 
   return true;
 }
@@ -416,10 +463,14 @@ export function onPlayerPickupCoin(scene, player, coin) {
 /** Fragment pickup flow: pause world, show upgrade/badge UI, resume via resumeGame(). */
 export function onPlayerPickupItem(scene, player, item) {
   if (!item.active) return;
+  const isPachinkoTicket = !!(item.getData && item.getData("isPachinkoTicket"));
   item.destroy();
 
   if (scene.sound && scene.sound.play) {
-    scene.sound.play("sfx_pickup_fragment", { volume: 0.8 });
+    scene.sound.play(
+      isPachinkoTicket ? "sfx_pickup" : "sfx_pickup_fragment",
+      { volume: isPachinkoTicket ? 0.25 : 0.8 }
+    );
   }
 
   if (scene.isGameOver || scene.isChoosingUpgrade) return;
@@ -740,6 +791,11 @@ export function onPlayerPickupItem(scene, player, item) {
     }
   };
 
+  if (isPachinkoTicket) {
+    showBadgeDrawStep(true);
+    return;
+  }
+
   const attackCount = scene.attackUpgradeCount ?? 0;
   const maxAttack = ATTACK_UPGRADE_MAX ?? 10;
   const cellCount = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
@@ -838,8 +894,8 @@ export function applyUpgrade(scene, choice) {
 
 /** Coin lifetime: expire at 30s, flicker in 20-25s and 25-30s windows. */
 export function updateCoinLifetime(scene, now) {
-  if (!scene.coins) return;
-  scene.coins.children.iterate((coin) => {
+  if (scene.coins) {
+    scene.coins.children.iterate((coin) => {
     if (!coin || !coin.active) return;
     if (!coin.getData) return;
 
@@ -883,6 +939,45 @@ export function updateCoinLifetime(scene, now) {
       if (coin.setAlpha) coin.setAlpha(alpha);
     } else if (coin.alpha !== 1 && coin.setAlpha) {
       coin.setAlpha(1);
+    }
+    });
+  }
+
+  if (!scene.items) return;
+  scene.items.children.iterate((item) => {
+    if (!item || !item.active) return;
+    if (!item.getData || !item.getData("isPachinkoTicket")) return;
+
+    let spawnTime =
+      typeof item.getData("spawnTime") === "number"
+        ? item.getData("spawnTime")
+        : now;
+    if (typeof item.getData("spawnTime") !== "number") {
+      item.setData("spawnTime", spawnTime);
+    }
+
+    const age = now - spawnTime;
+    if (age >= 30) {
+      if (item.destroy) item.destroy();
+      return;
+    }
+
+    if (age >= 20 && age < 25) {
+      const t = age - 20;
+      const phase = t * Math.PI * 2 * 0.8;
+      let alpha = 0.7 + 0.3 * Math.sin(phase);
+      if (alpha < 0.35) alpha = 0.35;
+      if (alpha > 1) alpha = 1;
+      if (item.setAlpha) item.setAlpha(alpha);
+    } else if (age >= 25) {
+      const t = age - 25;
+      const phase = t * Math.PI * 2 * 2;
+      let alpha = 0.6 + 0.4 * Math.sin(phase);
+      if (alpha < 0.2) alpha = 0.2;
+      if (alpha > 1) alpha = 1;
+      if (item.setAlpha) item.setAlpha(alpha);
+    } else if (item.alpha !== 1 && item.setAlpha) {
+      item.setAlpha(1);
     }
   });
 }

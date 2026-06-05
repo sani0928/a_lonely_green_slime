@@ -12,6 +12,7 @@ import {
   BOSS_HP_FIRST,
   BOSS_HP_LATE_STEP,
   BOSS_PATTERN_DAMAGE,
+  BOSS_PACHINKO_TICKET_DROP_CHANCE,
   BOSS_REWARD_BASE,
   BOSS_REWARD_PER_SPAWN,
   BOSS_SPAWN_KILL_STEP_FIRST,
@@ -23,6 +24,7 @@ import { getDirIndexFromVector } from "../render/entitySprites.js";
 import { hasBadge, modifyKillScore } from "./badgeSystem.js";
 import { returnBulletToCell } from "./cellSystem.js";
 import { applyPlayerDamage } from "./playerSystem.js";
+import { spawnPachinkoTicket } from "./upgradeSystem.js";
 
 const BOSS_TYPES = [
   {
@@ -152,6 +154,17 @@ function destroyBossHealthBar(boss) {
   const fill = boss.getData("hpBarFill");
   if (bg && bg.destroy) bg.destroy();
   if (fill && fill.destroy) fill.destroy();
+}
+
+function destroyBossAttachedObjects(scene, boss) {
+  if (!boss || !boss.getData) return;
+  const warning = boss.getData("chargeWarning");
+  if (warning && warning.destroy) {
+    if (scene && scene.tweens) scene.tweens.killTweensOf(warning);
+    warning.destroy();
+  }
+  boss.setData("chargeWarning", null);
+  destroyBossHealthBar(boss);
 }
 
 function createWarningGraphics(scene, depth = 70) {
@@ -439,7 +452,11 @@ function updateOneBoss(scene, boss, dt) {
     boss.setVelocity(0, 0);
     if (now >= stateUntil) {
       const warning = boss.getData("chargeWarning");
-      if (warning && warning.destroy) warning.destroy();
+      if (warning && warning.destroy) {
+        if (scene.tweens) scene.tweens.killTweensOf(warning);
+        warning.destroy();
+      }
+      boss.setData("chargeWarning", null);
       boss.setData("bossState", "charging");
       const chargeRange = boss.getData("chargeRange") || 720;
       const chargeSpeed = 520;
@@ -691,7 +708,14 @@ export function onBulletHitBoss(scene, bullet, boss) {
     BOSS_COIN_MAX
   );
   spawnBossCoinBurst(scene, boss.x, boss.y, reward, coinCount);
-  destroyBossHealthBar(boss);
+  if (Math.random() < (BOSS_PACHINKO_TICKET_DROP_CHANCE || 0)) {
+    spawnPachinkoTicket(
+      scene,
+      boss.x + Phaser.Math.Between(-36, 36),
+      boss.y + Phaser.Math.Between(-36, 36)
+    );
+  }
+  destroyBossAttachedObjects(scene, boss);
   boss.destroy();
 }
 
@@ -767,7 +791,7 @@ export function cleanupBossObjects(scene) {
   }
   if (scene.bosses) {
     scene.bosses.children.iterate((boss) => {
-      if (boss) destroyBossHealthBar(boss);
+      if (boss) destroyBossAttachedObjects(scene, boss);
     });
     scene.bosses.clear(true, true);
   }

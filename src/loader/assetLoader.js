@@ -23,6 +23,7 @@ export function preloadGame(scene) {
       frameHeight: 128,
     });
     scene.load.json("fragments_manifest", "assets/sprites/fragment_manifest.json");
+    scene.load.image("pachinko_ticket", "assets/sprites/pachinko_ticket.png");
 
     const gfx = scene.add.graphics();
     gfx.fillStyle(0xb0bec5, 1);
@@ -46,6 +47,12 @@ export function preloadGame(scene) {
     gfx.fillStyle(0xffeb3b, 1);
     gfx.fillRect(0, 0, 8, 8);
     gfx.generateTexture("coin", 8, 8);
+    gfx.clear();
+    gfx.fillStyle(0xffe082, 1);
+    gfx.fillRect(0, 0, 18, 12);
+    gfx.lineStyle(2, 0x6d4c41, 1);
+    gfx.strokeRect(0, 0, 18, 12);
+    gfx.generateTexture("pachinko_ticket", 18, 12);
     gfx.clear();
     gfx.fillStyle(0xb0bec5, 1);
     gfx.fillRect(0, 0, 6, 6);
