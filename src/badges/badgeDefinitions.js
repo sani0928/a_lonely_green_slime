@@ -87,6 +87,14 @@ export const BADGES = [
     maxStacks: 1,
   },
   {
+    id: "a_rich_boss",
+    name: "A Rich Boss",
+    description: "Coins dropped by bosses grant **3x** score.",
+    rarity: "epic",
+    category: "meta",
+    maxStacks: 1,
+  },
+  {
     id: "runner",
     name: "Runner",
     description: "Increases your **movement speed**.",
@@ -125,6 +133,22 @@ export const BADGES = [
     description: "Max cell limit **+1**. (Stacks with badges of the same effect.)",
     rarity: "normal",
     category: "attack",
+    maxStacks: 1,
+  },
+  {
+    id: "boss_hunter",
+    name: "Boss Hunter",
+    description: "Deal **2x** damage to bosses.",
+    rarity: "normal",
+    category: "attack",
+    maxStacks: 1,
+  },
+  {
+    id: "strong_magnet",
+    name: "Strong Magnet",
+    description: "Coin pickup magnet range becomes **much wider**.",
+    rarity: "normal",
+    category: "utility",
     maxStacks: 1,
   },
   {

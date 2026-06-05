@@ -852,6 +852,16 @@ export function updateCoinLifetime(scene, now) {
     }
 
     const age = now - spawnTime;
+    const burstStopAt = coin.getData("burstStopAt");
+    if (
+      typeof burstStopAt === "number" &&
+      now >= burstStopAt &&
+      !coin.getData("burstStopped")
+    ) {
+      if (coin.setVelocity) coin.setVelocity(0, 0);
+      coin.setData("burstStopped", true);
+    }
+
     if (age >= 30) {
       if (coin.destroy) coin.destroy();
       return;

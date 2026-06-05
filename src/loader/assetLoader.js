@@ -8,6 +8,11 @@ export function preloadGame(scene) {
       "assets/sprites/player_and_monsters.png",
       { frameWidth: 128, frameHeight: 128 }
     );
+    scene.load.spritesheet(
+      "bosses",
+      "assets/sprites/bosses.png",
+      { frameWidth: 128, frameHeight: 128 }
+    );
     scene.load.spritesheet("coins", "assets/sprites/coins.png", {
       frameWidth: 128,
       frameHeight: 128,
@@ -55,6 +60,7 @@ export function preloadGame(scene) {
   scene.load.audio("sfx_tab", "assets/audio/tab.wav");
   scene.load.audio("sfx_select", "assets/audio/select.wav");
   scene.load.audio("sfx_alert", "assets/audio/alert.wav");
+  scene.load.audio("sfx_boss_alert", "assets/audio/boss_alert.mp3");
   scene.load.audio("sfx_clear", "assets/audio/clear.wav");
   scene.load.audio("sfx_clear_ending", "assets/audio/clear_ending.wav");
   scene.load.audio("sfx_game_over_ending", "assets/audio/game_over_ending.flac");

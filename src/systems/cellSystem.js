@@ -101,24 +101,29 @@ function iterateEnemiesInRange(x, y, radius, grid, cellSize, callback) {
 }
 
 function getNearestEnemyInRange(scene, x, y, grid = null) {
-  if (!scene.enemies) return null;
+  if (!scene.enemies && !scene.bosses) return null;
 
   const preferShooter = hasBadge(scene, "shooter_hunter");
   let nearest = null;
   let nearestDistSq = LOCK_ON_RADIUS * LOCK_ON_RADIUS;
 
-  const checkEnemy = (enemy) => {
-    const dx = enemy.x - x;
-    const dy = enemy.y - y;
+  const checkTarget = (target) => {
+    if (!target || !target.active) return;
+    const dx = target.x - x;
+    const dy = target.y - y;
     const distSq = dx * dx + dy * dy;
     if (distSq < nearestDistSq) {
       nearestDistSq = distSq;
-      nearest = enemy;
+      nearest = target;
     }
   };
 
+  const checkBosses = () => {
+    if (!scene.bosses) return;
+    scene.bosses.children.iterate((boss) => checkTarget(boss));
+  };
+
   if (grid && typeof grid.get === "function") {
-    // 그리드 기반: (x,y) 반경 LOCK_ON_RADIUS 내 셀만 검사
     if (preferShooter) {
       iterateEnemiesInRange(
         x,
@@ -127,30 +132,32 @@ function getNearestEnemyInRange(scene, x, y, grid = null) {
         grid,
         GRID_CELL_SIZE,
         (enemy) => {
-          if (enemy.getData("type") === "shooter") checkEnemy(enemy);
+          if (enemy.getData("type") === "shooter") checkTarget(enemy);
         }
       );
       if (nearest) return nearest;
       nearestDistSq = LOCK_ON_RADIUS * LOCK_ON_RADIUS;
     }
-    iterateEnemiesInRange(x, y, LOCK_ON_RADIUS, grid, GRID_CELL_SIZE, checkEnemy);
+
+    iterateEnemiesInRange(x, y, LOCK_ON_RADIUS, grid, GRID_CELL_SIZE, checkTarget);
+    checkBosses();
     return nearest;
   }
 
-  // 그리드 없음: 기존 전 적 순회
-  if (preferShooter) {
+  if (preferShooter && scene.enemies) {
     scene.enemies.children.iterate((enemy) => {
       if (!enemy || !enemy.active) return;
       if (enemy.getData("type") !== "shooter") return;
-      checkEnemy(enemy);
+      checkTarget(enemy);
     });
     if (nearest) return nearest;
     nearestDistSq = LOCK_ON_RADIUS * LOCK_ON_RADIUS;
   }
-  scene.enemies.children.iterate((enemy) => {
-    if (!enemy || !enemy.active) return;
-    checkEnemy(enemy);
-  });
+
+  if (scene.enemies) {
+    scene.enemies.children.iterate((enemy) => checkTarget(enemy));
+  }
+  checkBosses();
   return nearest;
 }
 

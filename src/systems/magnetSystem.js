@@ -1,13 +1,20 @@
 /** Coin magnet effect: pull nearby coins toward the player. */
 
-const BASE_RADIUS = 150;
+import { hasBadge } from "./badgeSystem.js";
+
+const BASE_RADIUS = 80;
 const PULL_SPEED = 450;
+const STRONG_MAGNET_RADIUS = 300;
+const STRONG_MAGNET_PULL_SPEED = 600;
 
 export function applyMagnetEffects(scene, dt) {
   const player = scene.player;
   if (!player || !scene.coins) return;
 
-  const radiusSq = BASE_RADIUS * BASE_RADIUS;
+  const hasStrongMagnet = hasBadge(scene, "strong_magnet");
+  const radius = hasStrongMagnet ? STRONG_MAGNET_RADIUS : BASE_RADIUS;
+  const pullSpeed = hasStrongMagnet ? STRONG_MAGNET_PULL_SPEED : PULL_SPEED;
+  const radiusSq = radius * radius;
 
   scene.coins.children.iterate((obj) => {
     if (!obj || !obj.active) return;
@@ -17,8 +24,8 @@ export function applyMagnetEffects(scene, dt) {
     if (distSq <= 0 || distSq > radiusSq) return;
 
     const dist = Math.sqrt(distSq) || 1;
-    const vx = (dx / dist) * PULL_SPEED;
-    const vy = (dy / dist) * PULL_SPEED;
+    const vx = (dx / dist) * pullSpeed;
+    const vy = (dy / dist) * pullSpeed;
     if (obj.body && obj.body.setVelocity) {
       obj.body.setVelocity(vx, vy);
     } else if (obj.setVelocity) {

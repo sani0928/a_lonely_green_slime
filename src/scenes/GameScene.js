@@ -40,6 +40,7 @@ import * as CollisionSystem from "../systems/collisionSystem.js";
 import * as PauseSystem from "../systems/pauseSystem.js";
 import * as CompassSystem from "../systems/compassSystem.js";
 import * as MagnetSystem from "../systems/magnetSystem.js";
+import * as BossSystem from "../systems/bossSystem.js";
 import {
   getEntityIndexForPlayer,
   getFrameIndex,
@@ -254,10 +255,14 @@ export default class GameScene extends Phaser.Scene {
     });
 
     this.enemies = this.physics.add.group();
+    this.bosses = this.physics.add.group();
     this.bullets = this.physics.add.group();
     this.enemyProjectiles = this.physics.add.group();
+    this.bossProjectiles = this.physics.add.group();
     this.items = this.physics.add.group();
     this.coins = this.physics.add.group();
+    this.bossSpawnMessage = t("bossAlert.spawn");
+    BossSystem.initBossState(this);
 
     this.enemyBaseSpeedMin = ENEMY_BASE_SPEED_MIN;
     this.enemyBaseSpeedMax = ENEMY_BASE_SPEED_MAX;
@@ -632,15 +637,20 @@ export default class GameScene extends Phaser.Scene {
         if (enemy.getData("type") === "shooter") shooters += 1;
       });
     }
+    const elapsed = this.elapsedTime || 0;
+    const bosses = this.bosses ? this.bosses.countActive(true) : 0;
+    const kills = Math.max(0, this.killCount || 0);
+    const bossEffectiveKills = kills + Math.max(0, Math.floor(elapsed));
+    const nextBossKills = Math.max(0, this.nextBossSpawnKillCount || 0);
 
     const fps = this.game?.loop?.actualFps ?? 0;
     const delayMs = this.spawnEvent?.delay ?? 0;
-    const elapsed = this.elapsedTime || 0;
 
     this.devDebugText.setText(
       [
         `[DEV] t=${elapsed.toFixed(1)}s phase=${phase}`,
         `enemies=${active}/${cap} shooters=${shooters}`,
+        `bosses=${bosses} nextBoss=${bossEffectiveKills}/${nextBossKills} effKills`,
         `spawnDelay=${Math.round(delayMs)}ms fps=${Math.round(fps)}`,
         "F2:+60s F4:openUpgrade",
       ].join("\n")
@@ -782,6 +792,7 @@ export default class GameScene extends Phaser.Scene {
     const enemyBuilt = EnemySystem.buildEnemyGrid(this, 64);
     this._enemyGrid = enemyBuilt.grid;
     EnemySystem.moveEnemiesTowardsPlayer(this, enemyBuilt);
+    BossSystem.updateBosses(this, dt);
 
     MagnetSystem.applyMagnetEffects(this, dt);
 
@@ -836,6 +847,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.enemies) {
       this.enemies.clear(true, true);
     }
+    BossSystem.cleanupBossObjects(this);
 
     if (this.sound && this.sound.play) {
       if (clearAchieved) {

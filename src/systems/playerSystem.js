@@ -60,22 +60,18 @@ export function handleMovement(scene) {
   }
 }
 
-export function onPlayerHitByEnemy(scene, player, enemy, hitMeta = null) {
+export function applyPlayerDamage(scene, hitMeta = null, baseDamage = 1) {
   if (scene.isGameOver) {
-    enemy.destroy();
-    return;
+    return false;
   }
   if (scene.isInvincible) {
-    enemy.destroy();
-    return;
+    return false;
   }
   if (typeof scene.recordPlayerHit === "function") {
     scene.recordPlayerHit(hitMeta);
   }
-  enemy.destroy();
 
-  // 기본 피격 데미지: 1. Blood Hungry +1(총 2). Regen +1(총 2). 둘 다 있으면 3. (Critical은 적 공격 데미지에 적용)
-  let damage = 1;
+  let damage = Math.max(1, Math.round(baseDamage || 1));
   if (hasBadge(scene, "blood_hungry")) damage += 1;
   if (hasBadge(scene, "regen")) damage += 1;
 
@@ -95,9 +91,23 @@ export function onPlayerHitByEnemy(scene, player, enemy, hitMeta = null) {
   flashOnHit(scene);
 
   if (scene.playerHp <= 0) {
-    // HP가 0이 되어 사망한 경우: Game Over
     scene.endGame(false);
   }
+
+  return true;
+}
+
+export function onPlayerHitByEnemy(scene, player, enemy, hitMeta = null) {
+  if (scene.isGameOver) {
+    enemy.destroy();
+    return;
+  }
+  if (scene.isInvincible) {
+    enemy.destroy();
+    return;
+  }
+  enemy.destroy();
+  applyPlayerDamage(scene, hitMeta, 1);
 }
 
 export function flashOnHit(scene) {

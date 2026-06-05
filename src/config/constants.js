@@ -1,5 +1,5 @@
 ﻿// Game version shown in UI.
-export const GAME_VERSION = "0.9.3";
+export const GAME_VERSION = "0.9.4";
 
 // Dev mode flag.
 // Enables debug overlays/hotkeys only and must not alter gameplay balance.
@@ -15,7 +15,7 @@ export const WORLD_WIDTH = 3200;
 export const WORLD_HEIGHT = 3200;
 
 // Player
-export const PLAYER_BASE_HP = 5;
+export const PLAYER_BASE_HP = 7;
 export const PLAYER_MAX_HP_CAP = 10;
 export const PLAYER_BASE_SPEED = 240;
 export const PLAYER_SPEED_CAP = 320;
@@ -123,3 +123,22 @@ export const ENDLESS_CAP_STEP = 40;
 export const ENDLESS_CAP_MAX = 700;
 export const ENDLESS_CHASE_SPEED_MAX = 1.30;
 export const ENDLESS_SHOOTER_INTERVAL_SEC = 8;
+
+// Boss encounters
+export const BOSS_FIRST_SPAWN_KILLS = 100;
+export const BOSS_SPAWN_KILL_STEP_FIRST = 130;
+export const BOSS_SPAWN_KILL_STEP_INCREMENT = 30;
+export const BOSS_HEALTH_BAR_WIDTH = 90;
+export const BOSS_HEALTH_BAR_HEIGHT = 8;
+export const BOSS_CONTACT_DAMAGE = 1;
+export const BOSS_PATTERN_DAMAGE = 1;
+export const BOSS_CELL_HIT_COOLDOWN_SEC = 0.18;
+export const BOSS_CLOSE_PATTERN_DISTANCE = 220;
+export const BOSS_CLOSE_PATTERN_COOLDOWN_MULTIPLIER = 0.5;
+export const BOSS_HP_FIRST = 750;
+export const BOSS_HP_EARLY_STEP = 800;
+export const BOSS_HP_LATE_STEP = 650;
+export const BOSS_REWARD_BASE = 600;
+export const BOSS_REWARD_PER_SPAWN = 500;
+export const BOSS_COIN_MIN = 18;
+export const BOSS_COIN_MAX = 42;

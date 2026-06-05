@@ -2,6 +2,7 @@
 import * as UpgradeSystem from "./upgradeSystem.js";
 import * as PlayerSystem from "./playerSystem.js";
 import * as EnemySystem from "./enemySystem.js";
+import * as BossSystem from "./bossSystem.js";
 
 export function registerCollisions(scene) {
   scene.physics.add.overlap(
@@ -9,6 +10,13 @@ export function registerCollisions(scene) {
     scene.enemies,
     (bullet, enemy) => UpgradeSystem.onBulletHitEnemy(scene, bullet, enemy)
   );
+  if (scene.bosses) {
+    scene.physics.add.overlap(
+      scene.bullets,
+      scene.bosses,
+      (bullet, boss) => BossSystem.onBulletHitBoss(scene, bullet, boss)
+    );
+  }
   scene.physics.add.overlap(
     scene.player,
     scene.enemies,
@@ -18,6 +26,13 @@ export function registerCollisions(scene) {
         isShooter: enemy?.getData?.("type") === "shooter",
       })
   );
+  if (scene.bosses) {
+    scene.physics.add.overlap(
+      scene.player,
+      scene.bosses,
+      (player, boss) => BossSystem.onPlayerHitByBoss(scene, player, boss)
+    );
+  }
   scene.physics.add.overlap(
     scene.player,
     scene.enemyProjectiles,
@@ -30,6 +45,13 @@ export function registerCollisions(scene) {
       });
     }
   );
+  if (scene.bossProjectiles) {
+    scene.physics.add.overlap(
+      scene.player,
+      scene.bossProjectiles,
+      (player, proj) => BossSystem.onPlayerHitByBossProjectile(scene, player, proj)
+    );
+  }
   scene.physics.add.overlap(
     scene.enemyProjectiles,
     scene.enemies,

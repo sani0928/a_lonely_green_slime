@@ -139,7 +139,8 @@ function fireRangedShot(scene, enemy, player) {
   proj.setActive(true);
   proj.setVisible(true);
   proj.body.setAllowGravity(false);
-  proj.setCircle(3);
+  proj.setScale(1.35);
+  proj.setCircle(5);
   // Shooter projectile tint.
   proj.setTint(0xf5dc46);
 
