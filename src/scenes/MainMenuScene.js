@@ -119,6 +119,7 @@ export default class MainMenuScene extends Phaser.Scene {
 
     // 스캔라인 (CRT 느낌, 메인 메뉴만)
     const scanlines = this.add.graphics();
+    this.scanlines = scanlines;
     scanlines.lineStyle(1, 0x000000, 0.08);
     for (let sy = 0; sy < height; sy += 4) {
       scanlines.lineBetween(0, sy, width, sy);
@@ -138,6 +139,7 @@ export default class MainMenuScene extends Phaser.Scene {
       .setStroke("#0a0a0a", 6)
       .setDepth(2);
     title.setShadow(2, 2, "#000000", 4, true);
+    this.titleText = title;
 
     this.menuBgmToggleText = this.add
       .text(width - 14, height - 14, getBgmToggleLabel(), {
@@ -186,7 +188,7 @@ export default class MainMenuScene extends Phaser.Scene {
       PIXEL.borderDark,
       3
     );
-    this.add
+    this.startText = this.add
       .text(width / 2, startY + btnH / 2, t("menu.start"), {
         fontFamily: "Mulmaru",
         fontSize: "22px",
@@ -204,12 +206,10 @@ export default class MainMenuScene extends Phaser.Scene {
       showNicknameOverlay(this);
     });
     startHit.on("pointerover", () => {
-      startBg.clear();
-      drawPixelButton(startBg, startX, startY, btnW, btnH, 0x2e8b2e, PIXEL.btnStartHighlight, 0x1a5f1a, 3);
+      this.drawMenuButtonState("start", true);
     });
     startHit.on("pointerout", () => {
-      startBg.clear();
-      drawPixelButton(startBg, startX, startY, btnW, btnH, PIXEL.btnStartFill, PIXEL.btnStartHighlight, PIXEL.borderDark, 3);
+      this.drawMenuButtonState("start", false);
     });
     this.menuBtn.startBg = startBg;
 
@@ -217,7 +217,7 @@ export default class MainMenuScene extends Phaser.Scene {
     const setX = this.menuBtn.setX;
     const setBg = this.add.graphics().setDepth(2);
     drawPixelButton(setBg, setX, setY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
-    this.add
+    this.settingsText = this.add
       .text(width / 2, setY + btnH / 2, t("menu.settings"), {
         fontFamily: "Mulmaru",
         fontSize: "20px",
@@ -229,19 +229,17 @@ export default class MainMenuScene extends Phaser.Scene {
     this.setHit = setHit;
     setHit.on("pointerdown", () => showSettingsOverlay(this));
     setHit.on("pointerover", () => {
-      setBg.clear();
-      drawPixelButton(setBg, setX, setY, btnW, btnH, 0x3d3d5c, PIXEL.btnSubHighlight, 0x2a2a40, 2);
+      this.drawMenuButtonState("settings", true);
     });
     setHit.on("pointerout", () => {
-      setBg.clear();
-      drawPixelButton(setBg, setX, setY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
+      this.drawMenuButtonState("settings", false);
     });
     this.menuBtn.setBg = setBg;
 
     // 게임설명 버튼 (설정 아래)
     const guideBg = this.add.graphics().setDepth(2);
     drawPixelButton(guideBg, (width - btnW) / 2, guideY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
-    this.add
+    this.guideText = this.add
       .text(width / 2, guideY + btnH / 2, t("menu.howToPlay"), {
         fontFamily: "Mulmaru",
         fontSize: "20px",
@@ -253,12 +251,10 @@ export default class MainMenuScene extends Phaser.Scene {
     this.guideHit = guideHit;
     guideHit.on("pointerdown", () => showGuideOverlay(this));
     guideHit.on("pointerover", () => {
-      guideBg.clear();
-      drawPixelButton(guideBg, (width - btnW) / 2, guideY, btnW, btnH, 0x3d3d5c, PIXEL.btnSubHighlight, 0x2a2a40, 2);
+      this.drawMenuButtonState("guide", true);
     });
     guideHit.on("pointerout", () => {
-      guideBg.clear();
-      drawPixelButton(guideBg, (width - btnW) / 2, guideY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
+      this.drawMenuButtonState("guide", false);
     });
     this.menuBtn.guideBg = guideBg;
 
@@ -332,12 +328,106 @@ export default class MainMenuScene extends Phaser.Scene {
       }
     }
 
+    this.scale.on("resize", this.handleResize, this);
+    this.handleResize();
+
     this.events.once("shutdown", () => {
+      this.scale.off("resize", this.handleResize, this);
       stopSceneBgm(this, 0);
     });
     this.events.once("destroy", () => {
+      this.scale.off("resize", this.handleResize, this);
       stopSceneBgm(this, 0);
     });
+  }
+
+  getMenuLayout() {
+    const width = this.scale ? this.scale.width : this.cameras.main.width;
+    const height = this.scale ? this.scale.height : this.cameras.main.height;
+    const btnW = 200;
+    const btnH = 44;
+    const btnGap = 10;
+    const x = (width - btnW) / 2;
+    const startY = Math.floor(height * 0.4);
+    const setY = startY + btnH + btnGap;
+    const guideY = setY + btnH + btnGap;
+    return { width, height, btnW, btnH, x, startY, setY, guideY };
+  }
+
+  redrawScanlines(width, height) {
+    if (!this.scanlines) return;
+    this.scanlines.clear();
+    this.scanlines.lineStyle(1, 0x000000, 0.08);
+    for (let sy = 0; sy < height; sy += 4) {
+      this.scanlines.lineBetween(0, sy, width, sy);
+    }
+    this.scanlines.strokePath();
+  }
+
+  drawMenuButtonState(kind, isHover = false) {
+    const { btnW, btnH, x, startY, setY, guideY } = this.getMenuLayout();
+    if (kind === "start" && this.menuBtn?.startBg) {
+      this.menuBtn.startBg.clear();
+      drawPixelButton(
+        this.menuBtn.startBg,
+        x,
+        startY,
+        btnW,
+        btnH,
+        isHover ? 0x2e8b2e : PIXEL.btnStartFill,
+        PIXEL.btnStartHighlight,
+        isHover ? 0x1a5f1a : PIXEL.borderDark,
+        3
+      );
+      return;
+    }
+
+    const graphics = kind === "settings" ? this.menuBtn?.setBg : this.menuBtn?.guideBg;
+    const y = kind === "settings" ? setY : guideY;
+    if (!graphics) return;
+    graphics.clear();
+    drawPixelButton(
+      graphics,
+      x,
+      y,
+      btnW,
+      btnH,
+      isHover ? 0x3d3d5c : PIXEL.btnSubFill,
+      PIXEL.btnSubHighlight,
+      isHover ? 0x2a2a40 : PIXEL.borderDark,
+      2
+    );
+  }
+
+  handleResize() {
+    const { width, height, btnW, btnH, startY, setY, guideY } = this.getMenuLayout();
+
+    this.redrawScanlines(width, height);
+    if (this.titleText) {
+      this.titleText.setPosition(width / 2, Math.floor(height * 0.22));
+    }
+    if (this.menuBgmToggleText) {
+      this.menuBgmToggleText.setPosition(width - 14, height - 14);
+    }
+
+    this.drawMenuButtonState("start", false);
+    this.drawMenuButtonState("settings", false);
+    this.drawMenuButtonState("guide", false);
+
+    if (this.startText) this.startText.setPosition(width / 2, startY + btnH / 2);
+    if (this.settingsText) this.settingsText.setPosition(width / 2, setY + btnH / 2);
+    if (this.guideText) this.guideText.setPosition(width / 2, guideY + btnH / 2);
+
+    if (this.startHit) this.startHit.setPosition(width / 2, startY + btnH / 2).setSize(btnW, btnH);
+    if (this.setHit) this.setHit.setPosition(width / 2, setY + btnH / 2).setSize(btnW, btnH);
+    if (this.guideHit) this.guideHit.setPosition(width / 2, guideY + btnH / 2).setSize(btnW, btnH);
+
+    this.menuBounds = {
+      left: MARGIN,
+      right: width - MARGIN,
+      top: MARGIN,
+      bottom: height - MARGIN,
+    };
   }
 
   /**

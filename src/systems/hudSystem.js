@@ -233,6 +233,84 @@ export function createHud(scene) {
     .setOrigin(0.5, 0)
     .setScrollFactor(0)
     .setDepth(5);
+
+  relayoutHud(scene);
+}
+
+export function relayoutHud(scene) {
+  if (!scene || !scene.scale) return;
+  const { width, height } = scene.scale;
+  const bottomY = height - 32;
+  const fragmentsY = bottomY - 26;
+
+  if (scene._fragmentCapWarningTween) {
+    scene._fragmentCapWarningTween.remove();
+    scene._fragmentCapWarningTween = null;
+  }
+  scene._fragmentCapWarningActive = false;
+
+  if (scene.scoreLabelText) {
+    scene.scoreLabelText.setPosition(16, bottomY);
+  }
+  if (scene.scoreValueText) {
+    const scoreX = scene.scoreLabelText
+      ? scene.scoreLabelText.x + scene.scoreLabelText.width
+      : 16;
+    scene.scoreValueText.setPosition(scoreX, bottomY);
+  }
+
+  if (scene.itemsLabelText) {
+    scene.itemsLabelText.setPosition(16, fragmentsY);
+    scene.itemsLabelText.setScale(1);
+    scene.itemsLabelText.setAngle(0);
+    scene.itemsLabelText.setColor("#a5d6a7");
+    scene.itemsLabelText.setData("fragmentWarningBaseX", scene.itemsLabelText.x);
+    scene.itemsLabelText.setData("fragmentWarningBaseY", scene.itemsLabelText.y);
+  }
+  if (scene.itemsValueText) {
+    const itemsX = scene.itemsLabelText
+      ? scene.itemsLabelText.x + scene.itemsLabelText.width
+      : 16;
+    scene.itemsValueText.setPosition(itemsX, fragmentsY);
+    scene.itemsValueText.setScale(1);
+    scene.itemsValueText.setAngle(0);
+    scene.itemsValueText.setColor("#a5d6a7");
+    scene.itemsValueText.setData("fragmentWarningBaseX", scene.itemsValueText.x);
+    scene.itemsValueText.setData("fragmentWarningBaseY", scene.itemsValueText.y);
+  }
+
+  const panelWidth = 220;
+  const panelX = width - panelWidth - 16;
+  const panelY = 20;
+  const panelLeft = panelX + 12;
+  const rowGap = 20;
+
+  if (scene.buildPanelBg) {
+    scene.buildPanelBg.setPosition(panelX + panelWidth / 2, panelY + 64);
+    scene.buildPanelBg.setSize(panelWidth, 128);
+  }
+
+  const rows = [
+    [scene.hpLabelText, scene.hpValueText, panelY + 8],
+    [scene.nextCellLabelText, scene.nextCellValueText, panelY + 28],
+    [scene.attackLabelText, scene.attackValueText, panelY + 48],
+    [scene.badgeLabelText, scene.badgeValueText, panelY + 68],
+    [scene.killsLabelText, scene.killsValueText, panelY + 88],
+  ];
+
+  rows.forEach(([label, value, y]) => {
+    if (label) label.setPosition(panelLeft, y);
+    if (value) {
+      const valueX = label ? label.x + label.width : panelLeft;
+      value.setPosition(valueX, y);
+    }
+  });
+
+  if (scene.timerText) scene.timerText.setPosition(width / 2, 8);
+  if (scene.objectiveText) scene.objectiveText.setPosition(width / 2, 42);
+  if (scene.badgeSlotUnlockTimerText) {
+    scene.badgeSlotUnlockTimerText.setPosition(width / 2, 60);
+  }
 }
 
 function playDashboardStatBounce(scene, textObj) {

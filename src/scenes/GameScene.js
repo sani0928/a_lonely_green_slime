@@ -325,10 +325,14 @@ export default class GameScene extends Phaser.Scene {
       this.setupDevDebugTools();
     }
 
+    this.scale.on("resize", this.handleResize, this);
+
     this.events.once("shutdown", () => {
+      this.scale.off("resize", this.handleResize, this);
       stopSceneBgm(this, 0);
     });
     this.events.once("destroy", () => {
+      this.scale.off("resize", this.handleResize, this);
       stopSceneBgm(this, 0);
     });
     // Toggle pause with ESC (also available during upgrade selection).
@@ -362,6 +366,21 @@ export default class GameScene extends Phaser.Scene {
 
       this.game.events.on("visible", () => {});
       this.game.events.on("focus", () => {});
+    }
+  }
+
+  handleResize(gameSize) {
+    const width = gameSize && gameSize.width ? gameSize.width : this.scale.width;
+    const height = gameSize && gameSize.height ? gameSize.height : this.scale.height;
+
+    HudSystem.relayoutHud(this);
+    HudSystem.updateDashboard(this);
+
+    if (this.phaseAlertText) {
+      this.phaseAlertText.setPosition(width / 2, height / 2);
+    }
+    if (this.phaseAlertSubText) {
+      this.phaseAlertSubText.setPosition(width / 2, height / 2 + 42);
     }
   }
 
