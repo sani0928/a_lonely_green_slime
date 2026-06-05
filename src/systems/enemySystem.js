@@ -10,6 +10,8 @@
   ENDLESS_START_SEC,
   SHOOTER_CAP_STEP_SEC,
   SHOOTER_SPAWN_INTERVAL_SEC,
+  BOSS_REPEL_RADIUS,
+  BOSS_REPEL_PUSH_SPEED,
   PHASE_SPAWN_AMOUNT_BONUS,
   PHASE_AGGRO_RADIUS_MULTIPLIER,
   PHASE_AGGRO_CHASE_SPEED_MULTIPLIER,
@@ -46,6 +48,33 @@ function getEndlessMinutes(scene) {
   const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
   if (elapsed < ENDLESS_START_SEC) return 0;
   return (elapsed - ENDLESS_START_SEC) / 60;
+}
+
+function getBossRepelVelocity(scene, enemy) {
+  if (!scene?.bosses || !enemy) return { x: 0, y: 0 };
+  const radius = Math.max(1, BOSS_REPEL_RADIUS || 220);
+  const radiusSq = radius * radius;
+  const maxSpeed = Math.max(0, BOSS_REPEL_PUSH_SPEED || 0);
+  if (maxSpeed <= 0) return { x: 0, y: 0 };
+
+  let repelX = 0;
+  let repelY = 0;
+
+  scene.bosses.children.iterate((boss) => {
+    if (!boss || !boss.active) return;
+    const dx = enemy.x - boss.x;
+    const dy = enemy.y - boss.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq <= 0 || distSq > radiusSq) return;
+
+    const dist = Math.sqrt(distSq) || 1;
+    const pressure = 1 - dist / radius;
+    const strength = maxSpeed * pressure * pressure;
+    repelX += (dx / dist) * strength;
+    repelY += (dy / dist) * strength;
+  });
+
+  return { x: repelX, y: repelY };
 }
 
 function pickEnemyType(scene) {
@@ -585,8 +614,9 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
     }
 
     const effectiveSpeed = speed * speedScale;
-    const vx = finalDirX * effectiveSpeed;
-    const vy = finalDirY * effectiveSpeed;
+    const bossRepel = getBossRepelVelocity(scene, enemy);
+    const vx = finalDirX * effectiveSpeed + bossRepel.x;
+    const vy = finalDirY * effectiveSpeed + bossRepel.y;
 
     enemy.setVelocity(vx, vy);
 

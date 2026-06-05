@@ -88,6 +88,18 @@ function getBossDistanceToPlayer(boss, player) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+function isBossVisibleToPlayerCamera(scene, boss) {
+  const view = scene?.cameras?.main?.worldView;
+  if (!view || !boss) return true;
+  const margin = 96;
+  return (
+    boss.x >= view.left - margin &&
+    boss.x <= view.right + margin &&
+    boss.y >= view.top - margin &&
+    boss.y <= view.bottom + margin
+  );
+}
+
 function getBossPatternCooldown(scene, boss, player) {
   const baseCooldown = boss.getData("lastPatternCooldown") || 5.5;
   const closeDistance = Math.max(1, BOSS_CLOSE_PATTERN_DISTANCE || 220);
@@ -506,7 +518,8 @@ function updateOneBoss(scene, boss, dt) {
     typeof completedAt === "number"
       ? completedAt + getBossPatternCooldown(scene, boss, player)
       : boss.getData("nextPatternAt") || 0;
-  if (now >= Math.min(boss.getData("nextPatternAt") || dynamicReadyAt, dynamicReadyAt)) {
+  const patternReadyAt = Math.min(boss.getData("nextPatternAt") || dynamicReadyAt, dynamicReadyAt);
+  if (now >= patternReadyAt && isBossVisibleToPlayerCamera(scene, boss)) {
     startBossPattern(scene, boss);
     return;
   }
