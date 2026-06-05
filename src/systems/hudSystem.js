@@ -3,6 +3,7 @@ import {
   PLAYER_MAX_HP_CAP,
   CELL_MAX_COUNT,
   ATTACK_UPGRADE_MAX,
+  CLEAR_TIME_SEC,
 } from "../config/constants.js";
 import * as BadgeSystem from "./badgeSystem.js";
 import { getNextBadgeSlotUnlockRemaining } from "../ui/badgeSlotsUi.js";
@@ -211,8 +212,20 @@ export function createHud(scene) {
     .setScrollFactor(0)
     .setDepth(5);
 
-  scene.badgeSlotUnlockTimerText = scene.add
+  scene.objectiveText = scene.add
     .text(width / 2, 42, "", {
+      fontFamily: "Mulmaru",
+      fontSize: "13px",
+      fill: "#cfd8dc",
+      stroke: "#000000",
+      strokeThickness: 3,
+    })
+    .setOrigin(0.5, 0)
+    .setScrollFactor(0)
+    .setDepth(5);
+
+  scene.badgeSlotUnlockTimerText = scene.add
+    .text(width / 2, 60, "", {
       fontFamily: "Mulmaru",
       fontSize: "12px",
       fill: "#bdbdbd",
@@ -249,7 +262,73 @@ function updateStatWithBounce(scene, key, textObj, newStr) {
   }
 }
 
+function updateFragmentCapWarning(scene, isFull) {
+  const targets = [scene.itemsLabelText, scene.itemsValueText].filter(Boolean);
+  if (!scene.tweens || targets.length === 0) return;
+
+  if (isFull) {
+    if (scene._fragmentCapWarningActive) return;
+    scene._fragmentCapWarningActive = true;
+
+    targets.forEach((target) => {
+      target.setData("fragmentWarningBaseX", target.x);
+      target.setData("fragmentWarningBaseY", target.y);
+      target.setColor("#ffcc80");
+    });
+
+    scene._fragmentCapWarningTween = scene.tweens.add({
+      targets,
+      x: "+=4",
+      y: "-=1",
+      angle: { from: -1.5, to: 1.5 },
+      scaleX: 1.08,
+      scaleY: 0.94,
+      duration: 70,
+      ease: "Back.easeInOut",
+      yoyo: true,
+      repeat: 3,
+      repeatDelay: 18,
+      loop: -1,
+      loopDelay: 520,
+    });
+    return;
+  }
+
+  if (!scene._fragmentCapWarningActive) return;
+  scene._fragmentCapWarningActive = false;
+
+  if (scene._fragmentCapWarningTween) {
+    scene._fragmentCapWarningTween.remove();
+    scene._fragmentCapWarningTween = null;
+  }
+
+  targets.forEach((target) => {
+    const baseX = target.getData && target.getData("fragmentWarningBaseX");
+    const baseY = target.getData && target.getData("fragmentWarningBaseY");
+    if (typeof baseX === "number") target.setX(baseX);
+    if (typeof baseY === "number") target.setY(baseY);
+    target.setScale(1);
+    target.setAngle(0);
+    target.setColor("#a5d6a7");
+  });
+}
+
 export function updateDashboard(scene) {
+  if (scene.objectiveText) {
+    const elapsed = Math.max(0, Math.floor(scene.elapsedTime || 0));
+    if (elapsed >= CLEAR_TIME_SEC || scene.isClearAchieved) {
+      scene.objectiveText.setText(t("common.endlessObjective"));
+      scene.objectiveText.setFill("#66bb6a");
+    } else {
+      const remaining = Math.max(0, Math.floor(CLEAR_TIME_SEC - elapsed));
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      const timeStr = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      scene.objectiveText.setText(t("common.clearObjectiveIn", { time: timeStr }));
+      scene.objectiveText.setFill("#cfd8dc");
+    }
+  }
+
   if (scene.hpValueText) {
     let hpValueStr = "";
     let hpColor = "#ffab91";
@@ -271,6 +350,9 @@ export function updateDashboard(scene) {
     const maxF = 3 + (BadgeSystem.getMaxFragmentBonus(scene) || 0);
     const fragmentsValueStr = `${count}/${maxF}`;
     updateStatWithBounce(scene, "fragments", scene.itemsValueText, fragmentsValueStr);
+    updateFragmentCapWarning(scene, count >= maxF && maxF > 0);
+  } else {
+    updateFragmentCapWarning(scene, false);
   }
 
   if (scene.nextCellValueText) {

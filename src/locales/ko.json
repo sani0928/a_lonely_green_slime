@@ -19,7 +19,9 @@
     "off": "꺼짐",
     "lockedSlot": "잠긴 슬롯",
     "emptySlot": "빈 슬롯",
-    "nextBadgeSlotIn": "다음 뱃지 슬롯 개방까지 {{time}}"
+    "nextBadgeSlotIn": "다음 뱃지 슬롯 개방까지 {{time}}",
+    "clearObjectiveIn": "클리어까지 {{time}}",
+    "endlessObjective": "ENDLESS / x1.5 보너스 활성화"
   },
   "menu": {
     "title": "A lonely green slime",
@@ -33,7 +35,7 @@
     "guideGoal": "목표\n• 최대한 많은 점수를 획득하자. (15분 도달 시 1.5배 보너스!)\n• 최종 점수는 리더보드에 등록하여 다른 유저들과 공유할 수 있다.",
     "guideControls": "조작\n• WASD 또는 방향키: 상하좌우 이동\n• ESC: 일시정지 및 뱃지 슬롯",
     "guideCombat": "전투\n• 슬라임 주위를 도는 세포가 가까운 적을 자동 공격\n• 적 처치 시 코인 드랍 → 점수\n• 피격 시 HP 감소하며 일정 시간 무적",
-    "guideGrowth": "성장\n• 슬라임 조각: 몬스터를 처치하면 맵에 등장하며 업그레이드 또는 뱃지 뽑기를 할 수 있다.\n• 뱃지: 빈 슬롯 혹은 기존 뱃지와 교체하여 장착. 장착하는 동안 뱃지의 효과가 발동된다."
+    "guideGrowth": "성장\n• 슬라임 조각: 일정 몬스터를 처치하면 맵에 등장하며 업그레이드 또는 뱃지 뽑기를 할 수 있다.\n• 뱃지: 빈 슬롯 혹은 기존 뱃지와 교체하여 장착. 장착하는 동안 뱃지의 효과가 발동된다."
   },
   "settings": {
     "title": "설정",
@@ -55,7 +57,7 @@
     "clear": "클리어 !!",
     "scoreLabel": "점수:",
     "clearBonus": "×1.5 BONUS!",
-    "clearAfterBonusHint": "게임종료 후 x1.5 보너스가 적용됩니다.",
+    "clearAfterBonusHint": "끝없는 도전 렛츠고! 게임종료 후 x1.5 보너스가 적용됩니다.",
     "enterNickname": "닉네임을 입력하고 점수를 등록하세요.",
     "nicknamePlaceholder": "닉네임 (3–32자)",
     "topPlayers": "Top 20 Players",

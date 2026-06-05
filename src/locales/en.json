@@ -19,7 +19,9 @@
     "off": "OFF",
     "lockedSlot": "Locked slot",
     "emptySlot": "Empty slot",
-    "nextBadgeSlotIn": "Next badge slot in {{time}}"
+    "nextBadgeSlotIn": "Next badge slot in {{time}}",
+    "clearObjectiveIn": "Clear in {{time}}",
+    "endlessObjective": "ENDLESS / x1.5 bonus active"
   },
   "menu": {
     "title": "A lonely green slime",
@@ -55,7 +57,7 @@
     "clear": "Clear !!",
     "scoreLabel": "Score:",
     "clearBonus": "×1.5 BONUS!",
-    "clearAfterBonusHint": "After game over, an x1.5 bonus is applied.",
+    "clearAfterBonusHint": "Endless mode begins! An x1.5 bonus applies after game over.",
     "enterNickname": "Enter nickname and submit your score.",
     "nicknamePlaceholder": "Nickname (3–32 chars)",
     "topPlayers": "Top 20 Players",

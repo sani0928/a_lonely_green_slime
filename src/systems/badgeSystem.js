@@ -7,7 +7,7 @@ import {
 } from "../config/constants.js";
 
 // 이론상 장착 가능한 최대 뱃지 슬롯 수 (실제 사용 슬롯 수는 scene.badgeSlotCount로 제한)
-const MAX_EQUIPPED = 7;
+const MAX_EQUIPPED = 8;
 
 // rarity weights for badge draw rolls
 export const RARITY_WEIGHTS = {

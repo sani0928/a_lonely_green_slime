@@ -534,16 +534,27 @@ export default class GameScene extends Phaser.Scene {
       this.tweens.add({
         targets: text,
         alpha: { from: 0, to: 1 },
-        duration: 120,
+        duration: 130,
         ease: "Linear",
         yoyo: true,
-        repeat: 5,
-        hold: 30,
+        repeat: 3,
+        hold: 40,
         onComplete: () => {
-          if (text && text.destroy) text.destroy();
-          if (this.phaseAlertText === text) this.phaseAlertText = null;
-          if (subText && subText.destroy) subText.destroy();
-          if (this.phaseAlertSubText === subText) this.phaseAlertSubText = null;
+          text.setAlpha(1);
+          this.time.delayedCall(1600, () => {
+            this.tweens.add({
+              targets: subText ? [text, subText] : text,
+              alpha: 0,
+              duration: 420,
+              ease: "Quad.easeOut",
+              onComplete: () => {
+                if (text && text.destroy) text.destroy();
+                if (this.phaseAlertText === text) this.phaseAlertText = null;
+                if (subText && subText.destroy) subText.destroy();
+                if (this.phaseAlertSubText === subText) this.phaseAlertSubText = null;
+              },
+            });
+          });
         },
       });
       return;
@@ -702,6 +713,18 @@ export default class GameScene extends Phaser.Scene {
         blink: true,
         subMessage: t("overlay.clearAfterBonusHint"),
       });
+      if (this.objectiveText && this.tweens) {
+        this.objectiveText.setScale(1);
+        this.tweens.add({
+          targets: this.objectiveText,
+          scaleX: 1.18,
+          scaleY: 1.18,
+          yoyo: true,
+          repeat: 2,
+          duration: 160,
+          ease: "Quad.easeOut",
+        });
+      }
       if (this.sound && this.sound.play) {
         this.sound.play("sfx_clear", { volume: 0.75 });
       }
