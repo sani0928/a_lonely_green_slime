@@ -1,4 +1,5 @@
 # IDE / editor
+.codex_build/
 .cursor/
 .idea/
 *.swp

@@ -656,15 +656,13 @@ export function updateDashboard(scene) {
 export function getDashboardStatsForOverlay(scene) {
   if (!scene) return { hp: "", hpColor: "", cells: "", attack: "", badges: "" };
 
-  let hpColor = "#ffab91";
   const baseCap = PLAYER_MAX_HP_CAP ?? 10;
   const hpBonus = BadgeSystem.getMaxHpBonus(scene);
   const cap = baseCap + hpBonus;
   const hpVal = scene.playerHp ?? 0;
   const hp = `${t("common.hp")} ${hpVal} / ${cap}`;
   const ratio = cap > 0 ? hpVal / cap : 0;
-  if (ratio >= 0.7) hpColor = "#81c784";
-  else if (ratio < 0.3) hpColor = "#ef5350";
+  const hpColor = colorToCss(getHpColorByRatio(ratio));
 
   const nCell = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
   const baseMax = scene.cellMaxCount ?? CELL_MAX_COUNT;

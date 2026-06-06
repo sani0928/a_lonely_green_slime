@@ -10,6 +10,7 @@ import {
   BOSS_FIRST_SPAWN_KILLS,
   BOSS_HEALTH_BAR_HEIGHT,
   BOSS_HEALTH_BAR_WIDTH,
+  BOSS_HP_EARLY_COUNT,
   BOSS_HP_EARLY_STEP,
   BOSS_HP_FIRST,
   BOSS_HP_LATE_STEP,
@@ -80,10 +81,11 @@ function getBossTypeById(id) {
 
 function getBossHp(spawnOrdinal) {
   const ordinal = Math.max(1, spawnOrdinal | 0);
-  if (ordinal <= 3) {
+  const earlyCount = Math.max(1, BOSS_HP_EARLY_COUNT || 10);
+  if (ordinal <= earlyCount) {
     return BOSS_HP_FIRST + (ordinal - 1) * BOSS_HP_EARLY_STEP;
   }
-  return BOSS_HP_FIRST + 2 * BOSS_HP_EARLY_STEP + (ordinal - 3) * BOSS_HP_LATE_STEP;
+  return BOSS_HP_FIRST + (earlyCount - 1) * BOSS_HP_EARLY_STEP + (ordinal - earlyCount) * BOSS_HP_LATE_STEP;
 }
 
 function getBossReward(spawnOrdinal) {
