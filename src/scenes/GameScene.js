@@ -291,7 +291,8 @@ export default class GameScene extends Phaser.Scene {
 
     const camera = this.cameras.main;
     camera.setBounds(0, 0, this.worldWidth, this.worldHeight);
-    camera.startFollow(this.player, true, 0.1, 0.1);
+    camera.roundPixels = true;
+    camera.startFollow(this.player, true, 1, 1);
 
     PauseSystem.createPauseOverlay(this);
     CompassSystem.createCompass(this);

@@ -1,4 +1,4 @@
-/** Phaser 吏꾩엯, ???깅줉, 濡쒖??셋룹삤踰꾨젅???곕룞 */
+// Phaser bootstrap and scene registration.
 import MainMenuScene from "./scenes/MainMenuScene.js";
 import GameScene from "./scenes/GameScene.js";
 import { setupOverlayCallbacks } from "./ui/overlayUi.js";
@@ -8,6 +8,11 @@ const config = {
   type: Phaser.AUTO,
   transparent: true,
   parent: "game-container",
+  render: {
+    antialias: false,
+    pixelArt: true,
+    roundPixels: true,
+  },
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
