@@ -3,7 +3,7 @@ export const GAME_VERSION = "0.9.5";
 
 // Dev mode flag.
 // Enables debug overlays/hotkeys only and must not alter gameplay balance.
-export const DEV_MODE = true;
+export const DEV_MODE = false;
 
 // Rendering mode.
 // true: use pixel sprite sheets.
