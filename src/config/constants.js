@@ -15,12 +15,12 @@ export const WORLD_WIDTH = 3200;
 export const WORLD_HEIGHT = 3200;
 
 // Player
-export const PLAYER_BASE_HP = 7;
+export const PLAYER_BASE_HP = 10;
 export const PLAYER_MAX_HP_CAP = 10;
 export const PLAYER_BASE_SPEED = 240;
 export const PLAYER_SPEED_CAP = 320;
 export const PLAYER_SPEED_RAMP_SEC = 500;
-export const PLAYER_BASE_ATTACK = 10;
+export const PLAYER_BASE_ATTACK = 12;
 
 // Attack upgrade progression (20 steps, total +138 => final attack 148)
 export const ATTACK_UPGRADE_MAX = 20;
@@ -68,8 +68,8 @@ export const ENEMY_TYPES = {
 };
 
 // Cells
-export const CELL_BASE_COUNT = 2;
-export const CELL_MAX_COUNT = 8;
+export const CELL_BASE_COUNT = 3;
+export const CELL_MAX_COUNT = 10;
 export const CELL_BASE_RADIUS = 60;
 export const CELL_BASE_ROTATION_SPEED = 1;
 export const CELL_ROTATION_SPEED_INCREASE_PER_SECOND = 1 / 40;
@@ -137,9 +137,14 @@ export const BOSS_CLOSE_PATTERN_DISTANCE = 220;
 export const BOSS_CLOSE_PATTERN_COOLDOWN_MULTIPLIER = 0.5;
 export const BOSS_REPEL_RADIUS = 220;
 export const BOSS_REPEL_PUSH_SPEED = 240;
-export const BOSS_HP_FIRST = 650;
-export const BOSS_HP_EARLY_STEP = 700;
-export const BOSS_HP_LATE_STEP = 575;
+export const BOSS_HP_FIRST = 450;
+export const BOSS_HP_EARLY_STEP = 500;
+export const BOSS_HP_LATE_STEP = 400;
+export const BOSS_SCALING_GROUP_SIZE = 5;
+export const BOSS_DAMAGE_TAKEN_MULTIPLIER_STEP = 0.05;
+export const BOSS_DAMAGE_TAKEN_MULTIPLIER_MIN = 0.4;
+export const BOSS_PATTERN_COOLDOWN_MULTIPLIER_STEP = 0.05;
+export const BOSS_PATTERN_COOLDOWN_MULTIPLIER_MIN = 0.4;
 export const BOSS_REWARD_BASE = 600;
 export const BOSS_REWARD_PER_SPAWN = 500;
 export const BOSS_COIN_MIN = 18;

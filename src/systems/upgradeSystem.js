@@ -148,7 +148,7 @@ export function spawnUpgradeItem(scene) {
   return true;
 }
 
-export function spawnPachinkoTicket(scene, x, y) {
+export function spawnPachinkoTicket(scene, x, y, options = {}) {
   if (!scene || !scene.items || !scene.items.create) return false;
 
   const textureKey =
@@ -181,6 +181,19 @@ export function spawnPachinkoTicket(scene, x, y) {
 
   ticket.setData("isPachinkoTicket", true);
   ticket.setData("spawnTime", scene.elapsedTime || 0);
+
+  if (options && options.burst) {
+    const angle =
+      typeof options.angle === "number" ? options.angle : Math.random() * Math.PI * 2;
+    const speed =
+      typeof options.speed === "number"
+        ? options.speed
+        : Phaser.Math.Between(160, 260);
+    const stopAfter =
+      typeof options.stopAfter === "number" ? options.stopAfter : 0.45;
+    ticket.setData("burstStopAt", (scene.elapsedTime || 0) + stopAfter);
+    ticket.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+  }
 
   return true;
 }
@@ -957,6 +970,16 @@ export function updateCoinLifetime(scene, now) {
     }
 
     const age = now - spawnTime;
+    const burstStopAt = item.getData("burstStopAt");
+    if (
+      typeof burstStopAt === "number" &&
+      now >= burstStopAt &&
+      !item.getData("burstStopped")
+    ) {
+      if (item.setVelocity) item.setVelocity(0, 0);
+      item.setData("burstStopped", true);
+    }
+
     if (age >= 30) {
       if (item.destroy) item.destroy();
       return;

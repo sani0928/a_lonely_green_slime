@@ -5,16 +5,21 @@ import {
   BOSS_CLOSE_PATTERN_COOLDOWN_MULTIPLIER,
   BOSS_CLOSE_PATTERN_DISTANCE,
   BOSS_CONTACT_DAMAGE,
+  BOSS_DAMAGE_TAKEN_MULTIPLIER_MIN,
+  BOSS_DAMAGE_TAKEN_MULTIPLIER_STEP,
   BOSS_FIRST_SPAWN_KILLS,
   BOSS_HEALTH_BAR_HEIGHT,
   BOSS_HEALTH_BAR_WIDTH,
   BOSS_HP_EARLY_STEP,
   BOSS_HP_FIRST,
   BOSS_HP_LATE_STEP,
+  BOSS_PATTERN_COOLDOWN_MULTIPLIER_MIN,
+  BOSS_PATTERN_COOLDOWN_MULTIPLIER_STEP,
   BOSS_PATTERN_DAMAGE,
   BOSS_PACHINKO_TICKET_DROP_CHANCE,
   BOSS_REWARD_BASE,
   BOSS_REWARD_PER_SPAWN,
+  BOSS_SCALING_GROUP_SIZE,
   BOSS_SPAWN_KILL_STEP_FIRST,
   BOSS_SPAWN_KILL_STEP_INCREMENT,
   USE_PIXEL_SPRITES,
@@ -81,6 +86,26 @@ function getBossReward(spawnOrdinal) {
   return BOSS_REWARD_BASE + Math.max(1, spawnOrdinal | 0) * BOSS_REWARD_PER_SPAWN;
 }
 
+function getBossScalingStep(spawnOrdinal) {
+  const groupSize = Math.max(1, BOSS_SCALING_GROUP_SIZE || 5);
+  const ordinal = Math.max(1, spawnOrdinal | 0);
+  return Math.floor((ordinal - 1) / groupSize);
+}
+
+function getBossDamageTakenMultiplier(boss) {
+  const step = getBossScalingStep(boss?.getData?.("spawnOrdinal") || 1);
+  const minMultiplier = Math.max(0, BOSS_DAMAGE_TAKEN_MULTIPLIER_MIN ?? 0.4);
+  const multiplier = 1 - step * Math.max(0, BOSS_DAMAGE_TAKEN_MULTIPLIER_STEP || 0);
+  return Math.max(minMultiplier, multiplier);
+}
+
+function getBossPatternCooldownMultiplier(boss) {
+  const step = getBossScalingStep(boss?.getData?.("spawnOrdinal") || 1);
+  const minMultiplier = Math.max(0, BOSS_PATTERN_COOLDOWN_MULTIPLIER_MIN ?? 0.4);
+  const multiplier = 1 - step * Math.max(0, BOSS_PATTERN_COOLDOWN_MULTIPLIER_STEP || 0);
+  return Math.max(minMultiplier, multiplier);
+}
+
 function getBossDistanceToPlayer(boss, player) {
   if (!boss || !player) return Number.POSITIVE_INFINITY;
   const dx = (player.x || 0) - (boss.x || 0);
@@ -102,10 +127,11 @@ function isBossVisibleToPlayerCamera(scene, boss) {
 
 function getBossPatternCooldown(scene, boss, player) {
   const baseCooldown = boss.getData("lastPatternCooldown") || 5.5;
+  const scaledCooldown = baseCooldown * getBossPatternCooldownMultiplier(boss);
   const closeDistance = Math.max(1, BOSS_CLOSE_PATTERN_DISTANCE || 220);
   const isClose = getBossDistanceToPlayer(boss, player) <= closeDistance;
-  if (!isClose) return baseCooldown;
-  return baseCooldown * (BOSS_CLOSE_PATTERN_COOLDOWN_MULTIPLIER || 0.5);
+  if (!isClose) return scaledCooldown;
+  return scaledCooldown * (BOSS_CLOSE_PATTERN_COOLDOWN_MULTIPLIER || 0.5);
 }
 
 function scheduleNextBossPattern(scene, boss, player) {
@@ -675,6 +701,7 @@ export function onBulletHitBoss(scene, bullet, boss) {
   const isCritical = hasBadge(scene, "critical") && Math.random() < 0.2;
   if (isCritical) damage *= 2;
   if (hasBadge(scene, "boss_hunter")) damage *= 2;
+  damage = Math.max(1, Math.round(damage * getBossDamageTakenMultiplier(boss)));
 
   const currentHp = boss.getData("hp") ?? boss.getData("maxHp") ?? 1;
   const nextHp = currentHp - damage;
@@ -722,11 +749,12 @@ export function onBulletHitBoss(scene, bullet, boss) {
   );
   spawnBossCoinBurst(scene, boss.x, boss.y, reward, coinCount);
   if (Math.random() < (BOSS_PACHINKO_TICKET_DROP_CHANCE || 0)) {
-    spawnPachinkoTicket(
-      scene,
-      boss.x + Phaser.Math.Between(-36, 36),
-      boss.y + Phaser.Math.Between(-36, 36)
-    );
+    spawnPachinkoTicket(scene, boss.x, boss.y, {
+      burst: true,
+      angle: Math.random() * Math.PI * 2,
+      speed: Phaser.Math.Between(170, 270),
+      stopAfter: 0.45,
+    });
   }
   destroyBossAttachedObjects(scene, boss);
   boss.destroy();
