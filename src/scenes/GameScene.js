@@ -878,7 +878,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (typeof window.showGameOverOverlay === "function") {
-      window.showGameOverOverlay(finalScore, clearAchieved, baseScore);
+      window.showGameOverOverlay(finalScore, clearAchieved, baseScore, this.elapsedTime || 0);
     }
   }
 }

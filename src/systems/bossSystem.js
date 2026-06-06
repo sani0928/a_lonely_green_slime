@@ -16,6 +16,7 @@ import {
   BOSS_PATTERN_COOLDOWN_MULTIPLIER_MIN,
   BOSS_PATTERN_COOLDOWN_MULTIPLIER_STEP,
   BOSS_PATTERN_DAMAGE,
+  BOSS_HEALTH_POTION_DROP_CHANCE,
   BOSS_PACHINKO_TICKET_DROP_CHANCE,
   BOSS_REWARD_BASE,
   BOSS_REWARD_PER_SPAWN,
@@ -29,7 +30,7 @@ import { getDirIndexFromVector } from "../render/entitySprites.js";
 import { hasBadge, modifyKillScore } from "./badgeSystem.js";
 import { returnBulletToCell } from "./cellSystem.js";
 import { applyPlayerDamage } from "./playerSystem.js";
-import { spawnPachinkoTicket } from "./upgradeSystem.js";
+import { spawnHealthPotion, spawnPachinkoTicket } from "./upgradeSystem.js";
 
 const BOSS_TYPES = [
   {
@@ -62,9 +63,12 @@ const BOSS_PATTERN_POOL = [
   { id: "charge", cooldown: 5.0 },
   { id: "bomb", cooldown: 6.0 },
   { id: "needle", cooldown: 5.5 },
+  { id: "center_blast", cooldown: 7.0 },
 ];
 const NEEDLE_BULLET_DIRECTIONS = 16;
 const BOMB_RADIUS = 78;
+const CENTER_BLAST_RADIUS = 350;
+const CENTER_BLAST_WINDUP_SEC = 3.0;
 
 function getBossFrame(row, dirIndex) {
   return row * 8 + Phaser.Math.Clamp(dirIndex | 0, 0, 7);
@@ -194,6 +198,18 @@ function destroyBossHealthBar(boss) {
   if (fill && fill.destroy) fill.destroy();
 }
 
+function removeBossOwnedHazards(scene, boss) {
+  if (!scene || !scene.bossHazards || !boss) return;
+  scene.bossHazards = scene.bossHazards.filter((hazard) => {
+    if (!hazard || hazard.ownerBoss !== boss) return true;
+    if (hazard.warning && hazard.warning.destroy) {
+      if (scene.tweens) scene.tweens.killTweensOf(hazard.warning);
+      hazard.warning.destroy();
+    }
+    return false;
+  });
+}
+
 function destroyBossAttachedObjects(scene, boss) {
   if (!boss || !boss.getData) return;
   const warning = boss.getData("chargeWarning");
@@ -202,6 +218,7 @@ function destroyBossAttachedObjects(scene, boss) {
     warning.destroy();
   }
   boss.setData("chargeWarning", null);
+  removeBossOwnedHazards(scene, boss);
   destroyBossHealthBar(boss);
 }
 
@@ -389,6 +406,42 @@ function startNeedlePattern(scene, boss) {
   });
 }
 
+function startCenterBlastPattern(scene, boss) {
+  const now = scene.elapsedTime || 0;
+  const radius = CENTER_BLAST_RADIUS;
+  const warning = createWarningGraphics(scene);
+  drawPixelCircleWarning(warning, boss.x, boss.y, radius);
+
+  scene.tweens.add({
+    targets: warning,
+    alpha: 0.06,
+    duration: 150,
+    yoyo: true,
+    repeat: 17,
+  });
+  scene.tweens.add({
+    targets: boss,
+    scaleX: boss.scaleX * 1.08,
+    scaleY: boss.scaleY * 1.08,
+    duration: 180,
+    yoyo: true,
+    repeat: 7,
+  });
+
+  addTimedHazard(scene, {
+    type: "circle",
+    x: boss.x,
+    y: boss.y,
+    radius,
+    triggerAt: now + CENTER_BLAST_WINDUP_SEC,
+    warning,
+    ownerBoss: boss,
+  });
+
+  boss.setData("bossState", "pattern_lock");
+  boss.setData("stateUntil", now + CENTER_BLAST_WINDUP_SEC);
+}
+
 function fireNeedlePattern(scene, boss) {
   if (!scene.bossProjectiles) return;
 
@@ -410,6 +463,17 @@ function fireNeedlePattern(scene, boss) {
   }
 }
 
+function killEnemyByBossAttack(scene, enemy, x = null, y = null) {
+  if (!enemy || !enemy.active) return false;
+  const hitX = typeof x === "number" ? x : enemy.x;
+  const hitY = typeof y === "number" ? y : enemy.y;
+  if (scene.hitEmitter) {
+    scene.hitEmitter.explode(12, hitX, hitY);
+  }
+  enemy.destroy();
+  return true;
+}
+
 function startBossPattern(scene, boss) {
   const pattern = BOSS_PATTERN_POOL[Phaser.Math.Between(0, BOSS_PATTERN_POOL.length - 1)];
   boss.setData("lastPatternCooldown", pattern.cooldown);
@@ -418,6 +482,8 @@ function startBossPattern(scene, boss) {
     startChargePattern(scene, boss);
   } else if (pattern.id === "bomb") {
     startBombPattern(scene, boss);
+  } else if (pattern.id === "center_blast") {
+    startCenterBlastPattern(scene, boss);
   } else {
     startNeedlePattern(scene, boss);
   }
@@ -431,6 +497,12 @@ function updateBossHazards(scene) {
 
   for (let i = 0; i < scene.bossHazards.length; i += 1) {
     const hazard = scene.bossHazards[i];
+    if (hazard && hazard.ownerBoss && !hazard.ownerBoss.active) {
+      if (hazard.warning && hazard.warning.destroy) {
+        hazard.warning.destroy();
+      }
+      continue;
+    }
     if (!hazard || now < hazard.triggerAt) {
       remaining.push(hazard);
       continue;
@@ -446,6 +518,16 @@ function updateBossHazards(scene) {
       if (dist <= hazard.radius) {
         applyPlayerDamage(scene, { source: "projectile", isBoss: true }, BOSS_PATTERN_DAMAGE);
       }
+    }
+
+    if (scene.enemies) {
+      scene.enemies.children.iterate((enemy) => {
+        if (!enemy || !enemy.active) return;
+        const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, hazard.x, hazard.y);
+        if (dist <= hazard.radius) {
+          killEnemyByBossAttack(scene, enemy);
+        }
+      });
     }
 
     if (scene.hitEmitter) {
@@ -684,6 +766,18 @@ export function onPlayerHitByBossProjectile(scene, player, proj) {
   proj.destroy();
 }
 
+export function onBossProjectileHitEnemy(scene, proj, enemy) {
+  if (!proj || !proj.active || !enemy || !enemy.active) return;
+  killEnemyByBossAttack(scene, enemy, proj.x, proj.y);
+  proj.destroy();
+}
+
+export function onBossHitEnemy(scene, boss, enemy) {
+  if (!boss || !boss.active || !enemy || !enemy.active) return;
+  if (boss.getData && boss.getData("bossState") !== "charging") return;
+  killEnemyByBossAttack(scene, enemy);
+}
+
 export function onBulletHitBoss(scene, bullet, boss) {
   if (!boss || !boss.active) return;
 
@@ -740,6 +834,10 @@ export function onBulletHitBoss(scene, bullet, boss) {
 
   if (nextHp > 0) return;
 
+  if (scene.sound && scene.sound.play) {
+    scene.sound.play("sfx_boss_dead", { volume: 0.75 });
+  }
+
   let reward = boss.getData("rewardValue") || BOSS_REWARD_BASE;
   if (hasBadge(scene, "a_rich_boss")) reward *= 3;
   const coinCount = Phaser.Math.Clamp(
@@ -753,6 +851,14 @@ export function onBulletHitBoss(scene, bullet, boss) {
       burst: true,
       angle: Math.random() * Math.PI * 2,
       speed: Phaser.Math.Between(170, 270),
+      stopAfter: 0.45,
+    });
+  }
+  if (Math.random() < (BOSS_HEALTH_POTION_DROP_CHANCE || 0)) {
+    spawnHealthPotion(scene, boss.x, boss.y, {
+      burst: true,
+      angle: Math.random() * Math.PI * 2,
+      speed: Phaser.Math.Between(150, 240),
       stopAfter: 0.45,
     });
   }

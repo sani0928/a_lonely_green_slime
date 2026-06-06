@@ -5,6 +5,7 @@ import { BADGES } from "../badges/badgeDefinitions.js";
 import { t, formatBold } from "../i18n.js";
 import { getDashboardStatsForOverlay } from "../systems/hudSystem.js";
 import { getNicknameForSubmit } from "./nicknameOverlay.js";
+import { formatPlaySecondsForLeaderboard } from "../utils/timeFormat.js";
 import {
   applyBgmEnabled,
   getBgmEnabled,
@@ -44,6 +45,7 @@ export function setupOverlayCallbacks(phaserGame) {
   let currentLeaderboardPeriod = "30d";
   /** 게임 오버 오버레이에 표시한 최종 점수 — 제출 시 이 값을 사용해 화면·DB 불일치 방지 */
   let lastGameOverScore = 0;
+  let lastGameOverPlaySeconds = null;
   const upgradeOverlay = document.getElementById("upgrade-overlay");
   const upgradeBadgeSlotsContainer = document.getElementById("upgrade-badge-slots");
   const upgradeOptionsContainer = document.getElementById("upgrade-options");
@@ -56,6 +58,11 @@ export function setupOverlayCallbacks(phaserGame) {
     : null;
   const pauseOverlay = document.getElementById("pause-overlay");
   const pauseBadgeSlotsContainer = document.getElementById("pause-badge-slots");
+  const pauseStatsBar = document.getElementById("pause-stats-bar");
+  const pauseStatsHp = document.getElementById("pause-stats-hp");
+  const pauseStatsCells = document.getElementById("pause-stats-cells");
+  const pauseStatsAttack = document.getElementById("pause-stats-attack");
+  const pauseStatsBadges = document.getElementById("pause-stats-badges");
   const pauseBtnMain = document.getElementById("pause-btn-main");
   const pauseBtnQuit = document.getElementById("pause-btn-quit");
   const pauseBtnBgm = document.getElementById("pause-btn-bgm");
@@ -116,6 +123,24 @@ export function setupOverlayCallbacks(phaserGame) {
     }
   }
 
+  function renderPauseStats(scene) {
+    if (!pauseStatsBar || !pauseStatsHp || !pauseStatsCells || !pauseStatsAttack || !pauseStatsBadges) return;
+    if (!scene) {
+      pauseStatsBar.classList.remove("visible");
+      pauseStatsBar.setAttribute("aria-hidden", "true");
+      return;
+    }
+
+    const stats = getDashboardStatsForOverlay(scene);
+    pauseStatsHp.textContent = stats.hp;
+    pauseStatsHp.style.color = stats.hpColor || "#81c784";
+    pauseStatsCells.textContent = stats.cells;
+    pauseStatsAttack.textContent = stats.attack;
+    pauseStatsBadges.textContent = stats.badges;
+    pauseStatsBar.classList.add("visible");
+    pauseStatsBar.setAttribute("aria-hidden", "false");
+  }
+
   function clearStatus() {
     statusText.textContent = "";
     statusText.classList.remove("error");
@@ -143,7 +168,17 @@ export function setupOverlayCallbacks(phaserGame) {
         rank.textContent = `#${index + 1}`;
         const name = document.createElement("span");
         name.className = "leaderboard-name" + (index === 0 ? " leaderboard-name--gold" : index === 1 ? " leaderboard-name--silver" : index === 2 ? " leaderboard-name--bronze" : "");
-        name.textContent = item.nickname || "";
+        const playTimeText = formatPlaySecondsForLeaderboard(item.play_seconds);
+        const nameText = document.createElement("span");
+        nameText.className = "leaderboard-name-text";
+        nameText.textContent = item.nickname || "";
+        name.appendChild(nameText);
+        if (playTimeText) {
+          const timeText = document.createElement("span");
+          timeText.className = "leaderboard-play-time";
+          timeText.textContent = playTimeText;
+          name.appendChild(timeText);
+        }
         const score = document.createElement("span");
         score.className = "leaderboard-score";
         score.textContent = String(item.score ?? 0);
@@ -223,9 +258,15 @@ export function setupOverlayCallbacks(phaserGame) {
   window.showGameOverOverlay = async (
     score,
     isClear = false,
-    baseScore = null
+    baseScore = null,
+    playSeconds = null
   ) => {
     lastGameOverScore = typeof score === "number" ? score : 0;
+    lastGameOverPlaySeconds = playSeconds !== null &&
+      playSeconds !== undefined &&
+      Number.isFinite(Number(playSeconds))
+      ? Math.max(0, Number(playSeconds))
+      : null;
     clearStatus();
 
     const nicknameForSubmit =
@@ -311,7 +352,11 @@ export function setupOverlayCallbacks(phaserGame) {
         setStatus(submittingMsg);
       }
 
-      const result = await submitScore(nicknameForSubmit, lastGameOverScore);
+      const result = await submitScore(
+        nicknameForSubmit,
+        lastGameOverScore,
+        lastGameOverPlaySeconds
+      );
 
       const submittedName =
         (result && typeof result.nickname === "string" && result.nickname) ||
@@ -811,6 +856,7 @@ export function setupOverlayCallbacks(phaserGame) {
     if (scene) {
       renderBadgeSlots(pauseBadgeSlotsContainer, scene, { mode: "display" });
     }
+    renderPauseStats(scene);
     if (pauseBtnMain) pauseBtnMain.textContent = t("pause.toMain");
     if (pauseBtnQuit) pauseBtnQuit.textContent = t("pause.quitGame");
     if (pauseBtnBgm) pauseBtnBgm.textContent = getBgmToggleLabel();
@@ -819,6 +865,7 @@ export function setupOverlayCallbacks(phaserGame) {
 
   window.hidePauseOverlay = () => {
     if (pauseOverlay) pauseOverlay.classList.remove("visible");
+    renderPauseStats(null);
     currentPauseScene = null;
   };
 

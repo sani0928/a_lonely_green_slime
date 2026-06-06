@@ -16,6 +16,11 @@ export function registerCollisions(scene) {
       scene.bosses,
       (bullet, boss) => BossSystem.onBulletHitBoss(scene, bullet, boss)
     );
+    scene.physics.add.overlap(
+      scene.bosses,
+      scene.enemies,
+      (boss, enemy) => BossSystem.onBossHitEnemy(scene, boss, enemy)
+    );
   }
   scene.physics.add.overlap(
     scene.player,
@@ -50,6 +55,11 @@ export function registerCollisions(scene) {
       scene.player,
       scene.bossProjectiles,
       (player, proj) => BossSystem.onPlayerHitByBossProjectile(scene, player, proj)
+    );
+    scene.physics.add.overlap(
+      scene.bossProjectiles,
+      scene.enemies,
+      (proj, enemy) => BossSystem.onBossProjectileHitEnemy(scene, proj, enemy)
     );
   }
   scene.physics.add.overlap(

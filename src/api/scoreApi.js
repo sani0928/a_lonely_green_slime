@@ -51,15 +51,19 @@ export function getNextRunId() {
   return makeUniqueId("run");
 }
 
-export async function submitScore(nickname, score) {
+export async function submitScore(nickname, score, playSeconds = null) {
   const url = `${API_BASE_URL}/api/scores/`;
+  const payload = { nickname, score };
+  if (playSeconds !== null && playSeconds !== undefined) {
+    payload.play_seconds = playSeconds;
+  }
 
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ nickname, score }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {

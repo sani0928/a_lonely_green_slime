@@ -8,6 +8,8 @@ import {
   ENEMY_TYPES,
   DEV_MODE,
   USE_PIXEL_SPRITES,
+  HEALTH_POTION_HEAL_AMOUNT,
+  HEALTH_POTION_LIFETIME_SEC,
 } from "../config/constants.js";
 import { getSfxAttackKey } from "../i18n.js";
 import * as CellSystem from "./cellSystem.js";
@@ -162,7 +164,7 @@ export function spawnPachinkoTicket(scene, x, y, options = {}) {
   ticket.setVisible(true);
   ticket.setDepth(9);
   if (textureKey === "pachinko_ticket") {
-    ticket.setScale(0.72);
+    ticket.setScale(0.48);
   } else {
     ticket.setScale(1.8);
     ticket.setTint(0xffd54f);
@@ -173,7 +175,7 @@ export function spawnPachinkoTicket(scene, x, y, options = {}) {
   }
   if (ticket.body.setCircle) {
     if (textureKey === "pachinko_ticket") {
-      ticket.body.setCircle(22, 10, 2);
+      ticket.body.setCircle(46, 18, 22);
     } else {
       ticket.body.setCircle(5);
     }
@@ -193,6 +195,56 @@ export function spawnPachinkoTicket(scene, x, y, options = {}) {
       typeof options.stopAfter === "number" ? options.stopAfter : 0.45;
     ticket.setData("burstStopAt", (scene.elapsedTime || 0) + stopAfter);
     ticket.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+  }
+
+  return true;
+}
+
+export function spawnHealthPotion(scene, x, y, options = {}) {
+  if (!scene || !scene.items || !scene.items.create) return false;
+
+  const textureKey =
+    scene.textures && scene.textures.exists("health_potion")
+      ? "health_potion"
+      : "bullet";
+  const potion = scene.items.create(x, y, textureKey);
+  if (!potion || !potion.body) return false;
+
+  potion.setActive(true);
+  potion.setVisible(true);
+  potion.setDepth(9);
+  if (textureKey === "health_potion") {
+    potion.setScale(0.42);
+  } else {
+    potion.setScale(2);
+    potion.setTint(0xff5f8f);
+  }
+
+  if (potion.body.setAllowGravity) {
+    potion.body.setAllowGravity(false);
+  }
+  if (potion.body.setCircle) {
+    if (textureKey === "health_potion") {
+      potion.body.setCircle(42, 22, 34);
+    } else {
+      potion.body.setCircle(5);
+    }
+  }
+
+  potion.setData("isHealthPotion", true);
+  potion.setData("spawnTime", scene.elapsedTime || 0);
+
+  if (options && options.burst) {
+    const angle =
+      typeof options.angle === "number" ? options.angle : Math.random() * Math.PI * 2;
+    const speed =
+      typeof options.speed === "number"
+        ? options.speed
+        : Phaser.Math.Between(150, 240);
+    const stopAfter =
+      typeof options.stopAfter === "number" ? options.stopAfter : 0.45;
+    potion.setData("burstStopAt", (scene.elapsedTime || 0) + stopAfter);
+    potion.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
   }
 
   return true;
@@ -477,7 +529,34 @@ export function onPlayerPickupCoin(scene, player, coin) {
 export function onPlayerPickupItem(scene, player, item) {
   if (!item.active) return;
   const isPachinkoTicket = !!(item.getData && item.getData("isPachinkoTicket"));
+  const isHealthPotion = !!(item.getData && item.getData("isHealthPotion"));
   item.destroy();
+
+  if (isHealthPotion) {
+    if (scene.isGameOver) return;
+
+    const maxHp = scene.playerMaxHp ?? (PLAYER_MAX_HP_CAP ?? 10);
+    const beforeHp = scene.playerHp ?? 0;
+    const healAmount = HEALTH_POTION_HEAL_AMOUNT ?? 1;
+    scene.playerHp = Math.min(beforeHp + healAmount, maxHp);
+    const healed = scene.playerHp - beforeHp;
+
+    if (scene.hpText && typeof scene.hpText.setText === "function") {
+      scene.hpText.setText(`${scene.playerHp}/${maxHp}`);
+    }
+
+    if (healed > 0) {
+      if (scene.sound && scene.sound.play) {
+        scene.sound.play("sfx_heal", { volume: 0.55 });
+      }
+      if (typeof scene.showHpHeal === "function") {
+        scene.showHpHeal(healed);
+      }
+    } else if (scene.sound && scene.sound.play) {
+      scene.sound.play("sfx_pickup", { volume: 0.18 });
+    }
+    return;
+  }
 
   if (scene.sound && scene.sound.play) {
     scene.sound.play(
@@ -959,7 +1038,12 @@ export function updateCoinLifetime(scene, now) {
   if (!scene.items) return;
   scene.items.children.iterate((item) => {
     if (!item || !item.active) return;
-    if (!item.getData || !item.getData("isPachinkoTicket")) return;
+    if (
+      !item.getData ||
+      (!item.getData("isPachinkoTicket") && !item.getData("isHealthPotion"))
+    ) {
+      return;
+    }
 
     let spawnTime =
       typeof item.getData("spawnTime") === "number"
@@ -980,7 +1064,11 @@ export function updateCoinLifetime(scene, now) {
       item.setData("burstStopped", true);
     }
 
-    if (age >= 30) {
+    const lifetime = item.getData("isHealthPotion")
+      ? HEALTH_POTION_LIFETIME_SEC
+      : 30;
+
+    if (age >= lifetime) {
       if (item.destroy) item.destroy();
       return;
     }

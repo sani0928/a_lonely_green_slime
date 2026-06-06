@@ -7,6 +7,7 @@ import {
 import { t, getSfxAttackKey } from "../i18n.js";
 import { showSettingsOverlay } from "../ui/settingsOverlay.js";
 import { showGuideOverlay } from "../ui/guideOverlay.js";
+import { showLeaderboardOverlay } from "../ui/leaderboardOverlay.js";
 import { showNicknameOverlay } from "../ui/nicknameOverlay.js";
 import {
   applyBgmEnabled,
@@ -28,7 +29,7 @@ const CELL_HIT_RADIUS = 20;
 const CELL_AFTERIMAGE_INTERVAL_MS = 16;
 const SPAWN_MARGIN = 40;
 
-// 80~90년대 픽셀 게임 팔레트 (배경·그리드는 main.css #game-container에서 적용)
+// Retro pixel palette for the main menu.
 const PIXEL = {
   borderLight: 0x4a4a4a,
   borderDark: 0x1a1a1a,
@@ -55,7 +56,7 @@ const SIZE_BY_ENTITY_INDEX = [
   "medium",
 ];
 
-/** 가장자리 무작위 위치 (b = menuBounds) - 클릭용 셀 발사 시작점 */
+/** Pick a random position along the menu bounds edge. */
 function randomEdgePosition(b) {
   const edge = Math.floor(Math.random() * 4);
   if (edge === 0) return { x: b.left + Math.random() * (b.right - b.left), y: b.top };
@@ -64,7 +65,7 @@ function randomEdgePosition(b) {
   return { x: b.left, y: b.top + Math.random() * (b.bottom - b.top) };
 }
 
-/** 실제 플레이와 동일: 가장자리 밖에서 스폰 (spawnEnemy와 동일 로직) */
+/** Spawn outside the menu bounds, similar to gameplay edge spawns. */
 function spawnEdgePosition(b, margin = SPAWN_MARGIN) {
   const side = Math.floor(Math.random() * 4);
   switch (side) {
@@ -79,7 +80,7 @@ function spawnEdgePosition(b, margin = SPAWN_MARGIN) {
   }
 }
 
-/** NES 스타일 버튼 박스 그리기 (밝은 테두리 상·좌, 어두운 테두리 하·우) */
+/** Draw an NES-style pixel button box. */
 function drawPixelButton(graphics, x, y, w, h, fill, borderLight, borderDark, borderWidth = 3) {
   const bw = borderWidth;
   graphics.fillStyle(fill, 1);
@@ -117,7 +118,7 @@ export default class MainMenuScene extends Phaser.Scene {
     const cam = this.cameras.main;
     if (cam.setRoundPixels) cam.setRoundPixels(true);
 
-    // 스캔라인 (CRT 느낌, 메인 메뉴만)
+    // CRT-style scanlines for the main menu.
     const scanlines = this.add.graphics();
     this.scanlines = scanlines;
     scanlines.lineStyle(1, 0x000000, 0.08);
@@ -127,7 +128,7 @@ export default class MainMenuScene extends Phaser.Scene {
     scanlines.strokePath();
     scanlines.setScrollFactor(0).setDepth(100);
 
-    // 타이틀: 두꺼운 아웃라인 + 노란색
+    // Title text with a thick outline.
     const titleY = Math.floor(height * 0.22);
     const title = this.add
       .text(width / 2, titleY, t("menu.title"), {
@@ -165,18 +166,32 @@ export default class MainMenuScene extends Phaser.Scene {
     playSceneBgm(this, "bgm_menu");
     this.bindBgmGestureUnlock();
 
-    // Start / Settings 버튼 (크기 통일, 간격 축소)
+    // Main menu buttons.
     const btnW = 200;
     const btnH = 44;
     const btnGap = 10;
     const startX = (width - btnW) / 2;
     const startY = Math.floor(height * 0.4);
-    const setY = startY + btnH + btnGap;
+    const rankingY = startY + btnH + btnGap;
+    const setY = rankingY + btnH + btnGap;
     const guideY = setY + btnH + btnGap;
 
-    // Start 버튼 (오버레이 닫을 때 호버 초기화용으로 배경·좌표 저장)
+    // Start button opens the nickname overlay first.
     const startBg = this.add.graphics().setDepth(2);
-    this.menuBtn = { startX, startY, setX: (width - btnW) / 2, setY, guideY, btnW, btnH, startBg: null, setBg: null, guideBg: null };
+    this.menuBtn = {
+      startX,
+      startY,
+      rankingY,
+      setX: (width - btnW) / 2,
+      setY,
+      guideY,
+      btnW,
+      btnH,
+      startBg: null,
+      rankingBg: null,
+      setBg: null,
+      guideBg: null,
+    };
     drawPixelButton(
       startBg,
       startX,
@@ -202,7 +217,7 @@ export default class MainMenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.startHit = startHit;
     startHit.on("pointerdown", () => {
-      // 게임 시작 전 닉네임 오버레이를 먼저 연다.
+      // Ask for a nickname before starting the game.
       showNicknameOverlay(this);
     });
     startHit.on("pointerover", () => {
@@ -213,7 +228,41 @@ export default class MainMenuScene extends Phaser.Scene {
     });
     this.menuBtn.startBg = startBg;
 
-    // Settings 버튼 (동일 크기)
+    const rankingBg = this.add.graphics().setDepth(2);
+    drawPixelButton(
+      rankingBg,
+      (width - btnW) / 2,
+      rankingY,
+      btnW,
+      btnH,
+      PIXEL.btnSubFill,
+      PIXEL.btnSubHighlight,
+      PIXEL.borderDark,
+      2
+    );
+    this.rankingText = this.add
+      .text(width / 2, rankingY + btnH / 2, t("menu.leaderboard"), {
+        fontFamily: "Mulmaru",
+        fontSize: "20px",
+        color: "#b8b8d0",
+      })
+      .setOrigin(0.5)
+      .setDepth(3);
+    const rankingHit = this.add
+      .zone(width / 2, rankingY + btnH / 2, btnW, btnH)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    this.rankingHit = rankingHit;
+    rankingHit.on("pointerdown", () => showLeaderboardOverlay(this));
+    rankingHit.on("pointerover", () => {
+      this.drawMenuButtonState("ranking", true);
+    });
+    rankingHit.on("pointerout", () => {
+      this.drawMenuButtonState("ranking", false);
+    });
+    this.menuBtn.rankingBg = rankingBg;
+
+    // Settings button.
     const setX = this.menuBtn.setX;
     const setBg = this.add.graphics().setDepth(2);
     drawPixelButton(setBg, setX, setY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
@@ -236,7 +285,7 @@ export default class MainMenuScene extends Phaser.Scene {
     });
     this.menuBtn.setBg = setBg;
 
-    // 게임설명 버튼 (설정 아래)
+    // How-to-play guide button.
     const guideBg = this.add.graphics().setDepth(2);
     drawPixelButton(guideBg, (width - btnW) / 2, guideY, btnW, btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
     this.guideText = this.add
@@ -349,9 +398,10 @@ export default class MainMenuScene extends Phaser.Scene {
     const btnGap = 10;
     const x = (width - btnW) / 2;
     const startY = Math.floor(height * 0.4);
-    const setY = startY + btnH + btnGap;
+    const rankingY = startY + btnH + btnGap;
+    const setY = rankingY + btnH + btnGap;
     const guideY = setY + btnH + btnGap;
-    return { width, height, btnW, btnH, x, startY, setY, guideY };
+    return { width, height, btnW, btnH, x, startY, rankingY, setY, guideY };
   }
 
   redrawScanlines(width, height) {
@@ -365,7 +415,7 @@ export default class MainMenuScene extends Phaser.Scene {
   }
 
   drawMenuButtonState(kind, isHover = false) {
-    const { btnW, btnH, x, startY, setY, guideY } = this.getMenuLayout();
+    const { btnW, btnH, x, startY, rankingY, setY, guideY } = this.getMenuLayout();
     if (kind === "start" && this.menuBtn?.startBg) {
       this.menuBtn.startBg.clear();
       drawPixelButton(
@@ -382,8 +432,13 @@ export default class MainMenuScene extends Phaser.Scene {
       return;
     }
 
-    const graphics = kind === "settings" ? this.menuBtn?.setBg : this.menuBtn?.guideBg;
-    const y = kind === "settings" ? setY : guideY;
+    const graphics =
+      kind === "ranking"
+        ? this.menuBtn?.rankingBg
+        : kind === "settings"
+          ? this.menuBtn?.setBg
+          : this.menuBtn?.guideBg;
+    const y = kind === "ranking" ? rankingY : kind === "settings" ? setY : guideY;
     if (!graphics) return;
     graphics.clear();
     drawPixelButton(
@@ -400,7 +455,7 @@ export default class MainMenuScene extends Phaser.Scene {
   }
 
   handleResize() {
-    const { width, height, btnW, btnH, startY, setY, guideY } = this.getMenuLayout();
+    const { width, height, btnW, btnH, startY, rankingY, setY, guideY } = this.getMenuLayout();
 
     this.redrawScanlines(width, height);
     if (this.titleText) {
@@ -411,14 +466,17 @@ export default class MainMenuScene extends Phaser.Scene {
     }
 
     this.drawMenuButtonState("start", false);
+    this.drawMenuButtonState("ranking", false);
     this.drawMenuButtonState("settings", false);
     this.drawMenuButtonState("guide", false);
 
     if (this.startText) this.startText.setPosition(width / 2, startY + btnH / 2);
+    if (this.rankingText) this.rankingText.setPosition(width / 2, rankingY + btnH / 2);
     if (this.settingsText) this.settingsText.setPosition(width / 2, setY + btnH / 2);
     if (this.guideText) this.guideText.setPosition(width / 2, guideY + btnH / 2);
 
     if (this.startHit) this.startHit.setPosition(width / 2, startY + btnH / 2).setSize(btnW, btnH);
+    if (this.rankingHit) this.rankingHit.setPosition(width / 2, rankingY + btnH / 2).setSize(btnW, btnH);
     if (this.setHit) this.setHit.setPosition(width / 2, setY + btnH / 2).setSize(btnW, btnH);
     if (this.guideHit) this.guideHit.setPosition(width / 2, guideY + btnH / 2).setSize(btnW, btnH);
 
@@ -431,7 +489,7 @@ export default class MainMenuScene extends Phaser.Scene {
   }
 
   /**
-   * 몬스터 클릭: 가장자리에서 셀 1개 고속 발사(비행 중 몬스터 추적) → 잔상·피격·사망 연출 → 동일 몬스터 2마리(또는 200마리 초과 시 1마리) 스폰
+   * Fire a menu cell at a clicked monster, then respawn extra monsters.
    */
   onMonsterClicked(monster) {
     if (!monster.active || !this.menuBounds || !this.paradeSprites) return;
@@ -456,7 +514,7 @@ export default class MainMenuScene extends Phaser.Scene {
     });
   }
 
-  /** 비행 중인 셀들을 매 프레임 몬스터 현재 위치로 이동, 도달 시 피격 처리 */
+  /** Move flying menu cells toward their target monsters. */
   applyFlyingCell(dt) {
     if (!this.flyingCells || !this.flyingCells.length) return;
     const b = this.menuBounds;
@@ -635,9 +693,10 @@ export default class MainMenuScene extends Phaser.Scene {
     }
   }
 
-  /** DOM 오버레이(가이드/설정)가 열릴 때 호출 — 메뉴 버튼·몬스터 클릭 비활성화 */
+  /** Disable menu interactions while DOM overlays are open. */
   disableMenuButtons() {
     this.startHit?.disableInteractive();
+    this.rankingHit?.disableInteractive();
     this.setHit?.disableInteractive();
     this.guideHit?.disableInteractive();
     if (this.paradeSprites) {
@@ -649,18 +708,19 @@ export default class MainMenuScene extends Phaser.Scene {
     }
   }
 
-  /** DOM 오버레이가 닫힐 때 호출 — 메뉴 버튼·몬스터 클릭 다시 활성화 + 호버 상태 초기화 */
+  /** Re-enable menu interactions after DOM overlays close. */
   enableMenuButtons() {
     const opt = { useHandCursor: true };
 
     const safeSetInteractive = (obj) => {
-      // 씬이 이미 정리된 경우(setInteractive 내부에서 scene.sys 접근 중 오류) 방지
+      // Avoid setInteractive after the scene has already shut down.
       if (obj && obj.scene && obj.scene.sys && obj.scene.sys.input) {
         obj.setInteractive(opt);
       }
     };
 
     safeSetInteractive(this.startHit);
+    safeSetInteractive(this.rankingHit);
     safeSetInteractive(this.setHit);
     safeSetInteractive(this.guideHit);
 
@@ -677,11 +737,15 @@ export default class MainMenuScene extends Phaser.Scene {
         }
       });
     }
-    // 비활성화 중 pointerout이 발생하지 않아 호버 스타일이 남을 수 있음 → 기본 상태로 다시 그림
+    // Reset hover styles because pointerout may not fire while overlays are open.
     const m = this.menuBtn;
     if (m?.startBg) {
       m.startBg.clear();
       drawPixelButton(m.startBg, m.startX, m.startY, m.btnW, m.btnH, PIXEL.btnStartFill, PIXEL.btnStartHighlight, PIXEL.borderDark, 3);
+    }
+    if (m?.rankingBg) {
+      m.rankingBg.clear();
+      drawPixelButton(m.rankingBg, m.setX, m.rankingY, m.btnW, m.btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
     }
     if (m?.setBg) {
       m.setBg.clear();

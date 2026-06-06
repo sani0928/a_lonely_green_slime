@@ -24,6 +24,7 @@ export function preloadGame(scene) {
     });
     scene.load.json("fragments_manifest", "assets/sprites/fragment_manifest.json");
     scene.load.image("pachinko_ticket", "assets/sprites/pachinko_ticket.png");
+    scene.load.image("health_potion", "assets/sprites/health_potion.png");
 
     const gfx = scene.add.graphics();
     gfx.fillStyle(0xb0bec5, 1);
@@ -54,6 +55,14 @@ export function preloadGame(scene) {
     gfx.strokeRect(0, 0, 18, 12);
     gfx.generateTexture("pachinko_ticket", 18, 12);
     gfx.clear();
+    gfx.fillStyle(0xff5f8f, 1);
+    gfx.fillRoundedRect(3, 5, 14, 14, 3);
+    gfx.lineStyle(2, 0x3a1020, 1);
+    gfx.strokeRoundedRect(3, 5, 14, 14, 3);
+    gfx.fillStyle(0xffc1d4, 1);
+    gfx.fillRect(7, 2, 6, 5);
+    gfx.generateTexture("health_potion", 20, 20);
+    gfx.clear();
     gfx.fillStyle(0xb0bec5, 1);
     gfx.fillRect(0, 0, 6, 6);
     gfx.generateTexture("bullet", 6, 6);
@@ -68,6 +77,7 @@ export function preloadGame(scene) {
   scene.load.audio("sfx_select", "assets/audio/select.wav");
   scene.load.audio("sfx_alert", "assets/audio/alert.wav");
   scene.load.audio("sfx_boss_alert", "assets/audio/boss_alert.mp3");
+  scene.load.audio("sfx_boss_dead", "assets/audio/boss_dead.mp3");
   scene.load.audio("sfx_clear", "assets/audio/clear.wav");
   scene.load.audio("sfx_clear_ending", "assets/audio/clear_ending.wav");
   scene.load.audio("sfx_game_over_ending", "assets/audio/game_over_ending.flac");

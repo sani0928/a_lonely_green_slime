@@ -1,4 +1,3 @@
-/** HUD 생성 및 대시보드(HP/Cells/Attack/Badges/Kills) 갱신 */
 import {
   PLAYER_MAX_HP_CAP,
   CELL_MAX_COUNT,
@@ -6,19 +5,40 @@ import {
   CLEAR_TIME_SEC,
 } from "../config/constants.js";
 import * as BadgeSystem from "./badgeSystem.js";
-import { getNextBadgeSlotUnlockRemaining } from "../ui/badgeSlotsUi.js";
+import { getNextBadgeSlotUnlockRemaining, buildSortedSlots } from "../ui/badgeSlotsUi.js";
 import { t } from "../i18n.js";
 
 const fontStyle = { fontFamily: "Mulmaru", fontSize: "18px" };
-const fontStyleSmall = { fontFamily: "Mulmaru", fontSize: "16px" };
 const scoreFontStyle = { fontFamily: "Mulmaru", fontSize: "22px" };
 
-/** 코인 등급별 색상 (동/은/금/다이아) */
 const COIN_COLORS = {
   copper: "#be7846",
   silver: "#d2d4e1",
   gold: "#f0cd55",
   diamond: "#5ad2ff",
+};
+
+const HUD_COLORS = {
+  panel: 0x050805,
+  panelStroke: 0x46d278,
+  divider: 0x214832,
+  text: "#e8f5e9",
+  dimText: "#7d8b82",
+  hpSafe: 0x63d878,
+  hpWarn: 0xffcf5a,
+  hpDanger: 0xef5350,
+  slotDark: 0x101812,
+  slotStroke: 0x2b4533,
+  cellActive: 0x4ce57c,
+  cellInactive: 0x17251c,
+  starActive: 0xffd95a,
+  starInactive: 0x22271c,
+  badgeEmpty: 0x1a201e,
+  badgeLocked: 0x151515,
+  badgeOpen: 0x3f4842,
+  badgeNormal: 0xb8b8aa,
+  badgeEpic: 0xce93d8,
+  badgeUnique: 0xffd54f,
 };
 
 function getCoinColorForScore(score) {
@@ -29,11 +49,240 @@ function getCoinColorForScore(score) {
   return COIN_COLORS.copper;
 }
 
-/**
- * 점수 획득 시 '점수: 0000' 옆에 '+N' 짧은 애니메이션 표시
- * @param {Phaser.Scene} scene
- * @param {number} amount - 획득한 점수 (표시 및 코인 색상 결정에 사용)
- */
+function createCompatText(scene, text = "") {
+  return scene.add
+    .text(-9999, -9999, text, {
+      fontFamily: "Mulmaru",
+      fontSize: "1px",
+      fill: "#000000",
+    })
+    .setScrollFactor(0)
+    .setDepth(-100)
+    .setVisible(false);
+}
+
+function colorToCss(color) {
+  return `#${color.toString(16).padStart(6, "0")}`;
+}
+
+function getHpColorByRatio(ratio) {
+  if (ratio >= 0.7) return HUD_COLORS.hpSafe;
+  if (ratio >= 0.3) return HUD_COLORS.hpWarn;
+  return HUD_COLORS.hpDanger;
+}
+
+function getBadgeColor(rarity) {
+  if (rarity === "unique") return HUD_COLORS.badgeUnique;
+  if (rarity === "epic") return HUD_COLORS.badgeEpic;
+  return HUD_COLORS.badgeNormal;
+}
+
+function drawPixelRect(g, x, y, w, h, fill, stroke = HUD_COLORS.slotStroke, strokeAlpha = 1) {
+  g.fillStyle(fill, 1);
+  g.fillRect(x, y, w, h);
+  g.lineStyle(2, stroke, strokeAlpha);
+  g.strokeRect(x + 1, y + 1, w - 2, h - 2);
+}
+
+function drawCellSlot(g, x, y, size, active) {
+  const fill = active ? HUD_COLORS.cellActive : HUD_COLORS.cellInactive;
+  const stroke = active ? 0xb9ffd0 : HUD_COLORS.slotStroke;
+  g.fillStyle(fill, active ? 0.95 : 0.85);
+  g.fillCircle(x + size / 2, y + size / 2, size / 2);
+  g.lineStyle(2, stroke, active ? 0.9 : 0.75);
+  g.strokeCircle(x + size / 2, y + size / 2, size / 2 - 1);
+  if (active) {
+    g.fillStyle(0xd9ffe4, 0.9);
+    g.fillCircle(x + size * 0.34, y + size * 0.34, Math.max(1, size * 0.12));
+  }
+}
+
+function drawBadgeSlot(g, x, y, size, state) {
+  const locked = state.locked;
+  const rarity = state.rarity;
+  const soon = state.soon;
+  const pulseOn = state.pulseOn;
+  const fill = locked
+    ? soon && pulseOn
+      ? HUD_COLORS.badgeOpen
+      : HUD_COLORS.badgeLocked
+    : rarity
+      ? getBadgeColor(rarity)
+      : HUD_COLORS.badgeOpen;
+  const stroke = locked
+    ? soon
+      ? (pulseOn ? 0x8d9a90 : 0x333333)
+      : 0x333333
+    : rarity
+      ? getBadgeColor(rarity)
+      : 0x8d9a90;
+
+  g.fillStyle(fill, 1);
+  g.fillRect(x, y, size, size);
+  g.lineStyle(2, stroke, locked ? (soon ? 1 : 0.8) : 1);
+  g.strokeRect(x + 1, y + 1, size - 2, size - 2);
+
+  if (rarity) {
+    g.fillStyle(0xffffff, 0.28);
+    g.fillRect(x + 4, y + 4, Math.max(3, size * 0.22), 3);
+  } else if (!locked) {
+    g.fillStyle(0xc9d6cc, 0.32);
+    g.fillRect(x + 3, y + 3, Math.max(2, size - 6), Math.max(2, size - 6));
+  } else if (locked) {
+    g.fillStyle(0x111111, 0.7);
+    g.fillRect(x + size * 0.38, y + size * 0.38, size * 0.24, size * 0.24);
+    if (soon && pulseOn) {
+      g.fillStyle(0xc9d6cc, 0.35);
+      g.fillRect(x + 3, y + 3, Math.max(2, size - 6), 2);
+    }
+  }
+}
+
+function drawStatsHud(scene) {
+  if (!scene.statsHudGraphics || !scene._statsHudLayout) return;
+
+  const g = scene.statsHudGraphics;
+  const layout = scene._statsHudLayout;
+  const w = layout.width;
+  const h = layout.height;
+  const pad = 10;
+
+  const hpBonus = BadgeSystem.getMaxHpBonus(scene);
+  const hpMax = Math.max(1, (PLAYER_MAX_HP_CAP ?? 10) + hpBonus);
+  const hp = Phaser.Math.Clamp(scene.playerHp ?? 0, 0, hpMax);
+  const hpRatio = Phaser.Math.Clamp(hp / hpMax, 0, 1);
+  const hpColor = getHpColorByRatio(hpRatio);
+
+  const cellCount = Math.max(0, scene.cellActiveCount ?? scene.cellBaseCount ?? 1);
+  const cellMax = Math.max(1, (scene.cellMaxCount ?? CELL_MAX_COUNT) + (BadgeSystem.getCellMaxBonus(scene) || 0));
+  const attackCount = Phaser.Math.Clamp(scene.attackUpgradeCount ?? 0, 0, ATTACK_UPGRADE_MAX);
+  const badgeSlots = buildSortedSlots(scene);
+  const { remainingSeconds, allUnlocked } = getNextBadgeSlotUnlockRemaining(scene);
+  const isSlotUnlockSoon = !allUnlocked && remainingSeconds <= 10;
+  const pulseOn = isSlotUnlockSoon && Math.floor(((scene.time && scene.time.now) || 0) / 250) % 2 === 0;
+
+  g.clear();
+
+  g.fillStyle(HUD_COLORS.panel, 0.96);
+  g.fillRect(0, 0, w, h);
+  g.lineStyle(1, HUD_COLORS.panelStroke, 0.55);
+  g.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+  const labels = scene.statsHudLabels || {};
+  if (labels.hp) labels.hp.setPosition(pad, 8);
+  if (labels.hpValue) {
+    labels.hpValue
+      .setText(`${hp}/${hpMax}`)
+      .setColor(colorToCss(hpColor))
+      .setPosition(pad + 28, 8);
+  }
+  const hpBarX = pad;
+  const hpBarY = 30;
+  const hpBarW = 104;
+  const hpBarH = 11;
+  drawPixelRect(g, hpBarX, hpBarY, hpBarW, hpBarH, 0x131a15, HUD_COLORS.slotStroke, 0.9);
+  g.fillStyle(hpColor, 1);
+  g.fillRect(hpBarX + 3, hpBarY + 3, Math.max(0, (hpBarW - 6) * hpRatio), hpBarH - 6);
+
+  const cellX = 148;
+  const cellY = 30;
+  if (labels.cells) labels.cells.setPosition(cellX, 8);
+  const cellSlotSize = Phaser.Math.Clamp(Math.floor(76 / Math.max(1, cellMax)), 6, 10);
+  const cellStartX = cellX;
+  for (let i = 0; i < cellMax; i += 1) {
+    drawCellSlot(g, cellStartX + i * (cellSlotSize + 2), cellY, cellSlotSize, i < cellCount);
+  }
+
+  const attackX = 256;
+  if (labels.attack) labels.attack.setPosition(attackX, 8);
+  if (labels.attackValue) {
+    labels.attackValue
+      .setText(`+${attackCount}`)
+      .setColor("#ffd95a")
+      .setPosition(attackX + 34, 8);
+  }
+  const attackBarX = attackX;
+  const attackBarY = 30;
+  const attackBarW = 112;
+  const attackBarH = 11;
+  const attackRatio = Phaser.Math.Clamp(attackCount / Math.max(1, ATTACK_UPGRADE_MAX), 0, 1);
+  drawPixelRect(g, attackBarX, attackBarY, attackBarW, attackBarH, 0x17160e, 0x5d4b18, 0.95);
+  g.fillStyle(HUD_COLORS.starActive, 1);
+  g.fillRect(attackBarX + 3, attackBarY + 3, Math.max(0, (attackBarW - 6) * attackRatio), attackBarH - 6);
+  scene.attackStars = [];
+
+  const badgeX = 398;
+  const badgeY = 28;
+  if (labels.badges) labels.badges.setPosition(badgeX, 8);
+
+  const badgeSize = Phaser.Math.Clamp(Math.floor(72 / Math.max(1, badgeSlots.length)), 7, 9);
+  const badgeGap = 2;
+  const badgeStartX = badgeX;
+  scene.badgeSlotIcons = [];
+  badgeSlots.forEach((slot, i) => {
+    const state = {
+      locked: !!slot.locked,
+      rarity: !slot.locked && slot.def ? slot.def.rarity || "normal" : null,
+      soon: !!slot.locked && isSlotUnlockSoon,
+      pulseOn,
+    };
+    const x = badgeStartX + i * (badgeSize + badgeGap);
+    drawBadgeSlot(g, x, badgeY, badgeSize, state);
+    scene.badgeSlotIcons.push({ x, y: badgeY, ...state });
+  });
+
+  if (scene.badgeSlotUnlockTimerText) {
+    if (allUnlocked) {
+      scene.badgeSlotUnlockTimerText.setText("MAX").setColor("#81c784");
+    } else {
+      const m = Math.floor(remainingSeconds / 60);
+      const s = remainingSeconds % 60;
+      scene.badgeSlotUnlockTimerText
+        .setText(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`)
+        .setColor(isSlotUnlockSoon ? (pulseOn ? "#c9d6cc" : "#6f7a72") : "#bdbdbd");
+    }
+    scene.badgeSlotUnlockTimerText.setPosition(badgeX + 52, 8);
+  }
+}
+
+function getStatsHudSnapshot(scene) {
+  const hpBonus = BadgeSystem.getMaxHpBonus(scene);
+  const hpMax = Math.max(1, (PLAYER_MAX_HP_CAP ?? 10) + hpBonus);
+  const cellMax = Math.max(1, (scene.cellMaxCount ?? CELL_MAX_COUNT) + (BadgeSystem.getCellMaxBonus(scene) || 0));
+  const badgeSlots = buildSortedSlots(scene).map((slot) => ({
+    locked: !!slot.locked,
+    badgeId: slot.badgeId || null,
+    rarity: slot.def ? slot.def.rarity || "normal" : null,
+    empty: !!slot.empty,
+  }));
+  const slotInfo = getNextBadgeSlotUnlockRemaining(scene);
+  const remainingBucket = slotInfo.allUnlocked ? "max" : String(slotInfo.remainingSeconds);
+  const pulseBucket =
+    !slotInfo.allUnlocked && slotInfo.remainingSeconds <= 10
+      ? String(Math.floor(((scene.time && scene.time.now) || 0) / 250) % 2)
+      : "";
+  return JSON.stringify({
+    hp: scene.playerHp ?? 0,
+    hpMax,
+    cells: scene.cellActiveCount ?? scene.cellBaseCount ?? 1,
+    cellMax,
+    attack: scene.attackUpgradeCount ?? 0,
+    slots: scene.badgeSlotCount ?? 3,
+    badgeSlots,
+    timer: remainingBucket,
+    pulse: pulseBucket,
+    width: scene._statsHudLayout ? scene._statsHudLayout.width : 0,
+  });
+}
+
+function redrawStatsHudIfNeeded(scene, force = false) {
+  if (!scene || !scene.statsHudGraphics) return;
+  const snapshot = getStatsHudSnapshot(scene);
+  if (!force && scene._lastStatsHudSnapshot === snapshot) return;
+  scene._lastStatsHudSnapshot = snapshot;
+  drawStatsHud(scene);
+}
+
 export function showScoreGain(scene, amount) {
   if (!scene || typeof amount !== "number" || amount <= 0) return;
   if (!scene.scoreLabelText || !scene.scoreValueText) return;
@@ -67,25 +316,21 @@ export function showScoreGain(scene, amount) {
 export function createHud(scene) {
   const { width, height } = scene.scale;
 
-  const bottomY = height - 32;
   scene.scoreLabelText = scene.add
-    .text(16, bottomY, t("common.score") + ": ", { ...scoreFontStyle, fill: "#ffffff" })
+    .text(16, height - 32, t("common.score") + ": ", { ...scoreFontStyle, fill: "#ffffff" })
     .setScrollFactor(0)
     .setDepth(50);
   scene.scoreValueText = scene.add
-    .text(
-      scene.scoreLabelText.x + scene.scoreLabelText.width,
-      bottomY,
-      "0",
-      { ...scoreFontStyle, fill: "#4caf50" }
-    )
+    .text(scene.scoreLabelText.x + scene.scoreLabelText.width, height - 32, "0", {
+      ...scoreFontStyle,
+      fill: "#4caf50",
+    })
     .setScrollFactor(0)
     .setDepth(50);
   scene.scoreText = scene.scoreValueText;
 
-  const fragmentsY = bottomY - 26;
   scene.itemsLabelText = scene.add
-    .text(16, fragmentsY, t("common.fragments") + ": ", {
+    .text(16, height - 58, t("common.fragments") + ": ", {
       ...fontStyle,
       fontSize: "16px",
       fill: "#a5d6a7",
@@ -93,7 +338,7 @@ export function createHud(scene) {
     .setScrollFactor(0)
     .setDepth(50);
   scene.itemsValueText = scene.add
-    .text(16 + scene.itemsLabelText.width, fragmentsY, "0/3", {
+    .text(16 + scene.itemsLabelText.width, height - 58, "0/3", {
       ...fontStyle,
       fontSize: "16px",
       fill: "#a5d6a7",
@@ -102,102 +347,86 @@ export function createHud(scene) {
     .setDepth(50);
   scene.itemsText = scene.itemsValueText;
 
-  const panelWidth = 220;
-  const panelX = width - panelWidth - 16;
-  const panelY = 20;
-  const panelLeft = panelX + 12;
+  scene.statsHudContainer = scene.add.container(0, 0).setScrollFactor(0).setDepth(50);
+  scene.statsHudGraphics = scene.add.graphics();
+  scene.hpBarGraphics = scene.statsHudGraphics;
+  scene.cellBarGraphics = scene.statsHudGraphics;
+  scene.attackGraphics = scene.statsHudGraphics;
+  scene.badgeSlotGraphics = scene.statsHudGraphics;
+  scene.statsHudContainer.add(scene.statsHudGraphics);
 
-  scene.buildPanelBg = scene.add
-    .rectangle(
-      panelX + panelWidth / 2,
-      panelY + 64,
-      panelWidth,
-      128,
-      0x000000,
-      0.45
-    )
-    .setStrokeStyle(1, 0x4caf50, 0.9)
-    .setScrollFactor(0)
-    .setDepth(1);
+  scene.statsHudLabels = {
+    hp: scene.add.text(0, 0, "HP", {
+      fontFamily: "Mulmaru",
+      fontSize: "12px",
+      fill: HUD_COLORS.text,
+    }),
+    hpValue: scene.add.text(0, 0, "0/0", {
+      fontFamily: "Mulmaru",
+      fontSize: "12px",
+      fill: "#81c784",
+    }),
+    cells: scene.add.text(0, 0, "CELL", {
+      fontFamily: "Mulmaru",
+      fontSize: "11px",
+      fill: "#a5d6a7",
+    }),
+    attack: scene.add.text(0, 0, "ATK", {
+      fontFamily: "Mulmaru",
+      fontSize: "12px",
+      fill: "#ffe082",
+    }),
+    attackValue: scene.add.text(0, 0, "+0", {
+      fontFamily: "Mulmaru",
+      fontSize: "12px",
+      fill: "#ffd95a",
+    }),
+    badges: scene.add.text(0, 0, "BADGE", {
+      fontFamily: "Mulmaru",
+      fontSize: "11px",
+      fill: "#ce93d8",
+    }),
+  };
+  Object.values(scene.statsHudLabels).forEach((label) => scene.statsHudContainer.add(label));
 
-  scene.hpLabelText = scene.add
-    .text(panelLeft, panelY + 8, t("common.hp") + " ", {
-      ...fontStyleSmall,
-      fill: "#ffab91",
+  scene.badgeSlotUnlockTimerText = scene.add
+    .text(0, 0, "00:00", {
+      fontFamily: "Mulmaru",
+      fontSize: "12px",
+      fill: "#bdbdbd",
+      stroke: "#000000",
+      strokeThickness: 2,
     })
     .setScrollFactor(0)
-    .setDepth(2);
-  scene.hpValueText = scene.add
-    .text(panelLeft + scene.hpLabelText.width, panelY + 8, `${scene.playerHp ?? 0}/${scene.playerMaxHp ?? 10}`, {
-      ...fontStyleSmall,
-      fill: "#ffab91",
+    .setDepth(51);
+  scene.statsHudContainer.add(scene.badgeSlotUnlockTimerText);
+
+  scene.killCounterText = scene.add
+    .text(width - 16, 20, "KILL 0", {
+      fontFamily: "Mulmaru",
+      fontSize: "18px",
+      fill: "#ffe082",
+      stroke: "#000000",
+      strokeThickness: 4,
     })
+    .setOrigin(1, 0)
     .setScrollFactor(0)
-    .setDepth(2);
+    .setDepth(50);
+
+  scene.hpLabelText = createCompatText(scene, t("common.hp"));
+  scene.hpValueText = createCompatText(scene, `${scene.playerHp ?? 0}/${scene.playerMaxHp ?? 10}`);
   scene.hpText = scene.hpValueText;
-
-  scene.nextCellLabelText = scene.add
-    .text(panelLeft, panelY + 28, t("common.cells") + ": ", {
-      ...fontStyleSmall,
-      fill: "#ffe082",
-    })
-    .setScrollFactor(0)
-    .setDepth(2);
-  scene.nextCellValueText = scene.add
-    .text(panelLeft + scene.nextCellLabelText.width, panelY + 28, `2/${CELL_MAX_COUNT}`, {
-      ...fontStyleSmall,
-      fill: "#ffe082",
-    })
-    .setScrollFactor(0)
-    .setDepth(2);
+  scene.nextCellLabelText = createCompatText(scene, t("common.cells"));
+  scene.nextCellValueText = createCompatText(scene, `2/${CELL_MAX_COUNT}`);
   scene.nextCellText = scene.nextCellValueText;
-
-  scene.attackLabelText = scene.add
-    .text(panelLeft, panelY + 48, t("common.attack") + ": ", {
-      ...fontStyleSmall,
-      fill: "#ffe082",
-    })
-    .setScrollFactor(0)
-    .setDepth(2);
-  scene.attackValueText = scene.add
-    .text(panelLeft + scene.attackLabelText.width, panelY + 48, "+0", {
-      ...fontStyleSmall,
-      fill: "#ffe082",
-    })
-    .setScrollFactor(0)
-    .setDepth(2);
+  scene.attackLabelText = createCompatText(scene, t("common.attack"));
+  scene.attackValueText = createCompatText(scene, "+0");
   scene.attackUpgradeText = scene.attackValueText;
-
-  scene.badgeLabelText = scene.add
-    .text(panelLeft, panelY + 68, t("common.badges") + ": ", {
-      ...fontStyleSmall,
-      fill: "#ffe082",
-    })
-    .setScrollFactor(0)
-    .setDepth(2);
-  scene.badgeValueText = scene.add
-    .text(panelLeft + scene.badgeLabelText.width, panelY + 68, "0/3", {
-      ...fontStyleSmall,
-      fill: "#ffe082",
-    })
-    .setScrollFactor(0)
-    .setDepth(2);
+  scene.badgeLabelText = createCompatText(scene, t("common.badges"));
+  scene.badgeValueText = createCompatText(scene, "0/3");
   scene.badgeText = scene.badgeValueText;
-
-  scene.killsLabelText = scene.add
-    .text(panelLeft, panelY + 88, t("common.kills") + ": ", {
-      ...fontStyleSmall,
-      fill: "#ffe082",
-    })
-    .setScrollFactor(0)
-    .setDepth(2);
-  scene.killsValueText = scene.add
-    .text(panelLeft + scene.killsLabelText.width, panelY + 88, "0", {
-      ...fontStyleSmall,
-      fill: "#ffe082",
-    })
-    .setScrollFactor(0)
-    .setDepth(2);
+  scene.killsLabelText = createCompatText(scene, t("common.kills"));
+  scene.killsValueText = createCompatText(scene, "0");
   scene.killsText = scene.killsValueText;
 
   scene.timerText = scene.add
@@ -224,24 +453,26 @@ export function createHud(scene) {
     .setScrollFactor(0)
     .setDepth(5);
 
-  scene.badgeSlotUnlockTimerText = scene.add
-    .text(width / 2, 60, "", {
-      fontFamily: "Mulmaru",
-      fontSize: "12px",
-      fill: "#bdbdbd",
-    })
-    .setOrigin(0.5, 0)
-    .setScrollFactor(0)
-    .setDepth(5);
-
   relayoutHud(scene);
 }
 
 export function relayoutHud(scene) {
   if (!scene || !scene.scale) return;
   const { width, height } = scene.scale;
-  const bottomY = height - 32;
-  const fragmentsY = bottomY - 26;
+
+  const hudWidth = Math.min(520, Math.max(360, width - 32));
+  const hudHeight = 54;
+  const hudX = Math.floor((width - hudWidth) / 2);
+  const hudY = Math.floor(height - hudHeight - 14);
+  scene._statsHudLayout = { x: hudX, y: hudY, width: hudWidth, height: hudHeight };
+
+  if (scene.statsHudContainer) {
+    scene.statsHudContainer.setPosition(hudX, hudY);
+  }
+
+  const overlapLeftHud = width < 900;
+  const bottomY = overlapLeftHud ? hudY - 36 : height - 32;
+  const fragmentsY = overlapLeftHud ? hudY - 62 : height - 58;
 
   if (scene._fragmentCapWarningTween) {
     scene._fragmentCapWarningTween.remove();
@@ -279,44 +510,20 @@ export function relayoutHud(scene) {
     scene.itemsValueText.setData("fragmentWarningBaseY", scene.itemsValueText.y);
   }
 
-  const panelWidth = 220;
-  const panelX = width - panelWidth - 16;
-  const panelY = 20;
-  const panelLeft = panelX + 12;
-  const rowGap = 20;
-
-  if (scene.buildPanelBg) {
-    scene.buildPanelBg.setPosition(panelX + panelWidth / 2, panelY + 64);
-    scene.buildPanelBg.setSize(panelWidth, 128);
+  if (scene.killCounterText) {
+    scene.killCounterText.setPosition(width - 16, 20);
   }
-
-  const rows = [
-    [scene.hpLabelText, scene.hpValueText, panelY + 8],
-    [scene.nextCellLabelText, scene.nextCellValueText, panelY + 28],
-    [scene.attackLabelText, scene.attackValueText, panelY + 48],
-    [scene.badgeLabelText, scene.badgeValueText, panelY + 68],
-    [scene.killsLabelText, scene.killsValueText, panelY + 88],
-  ];
-
-  rows.forEach(([label, value, y]) => {
-    if (label) label.setPosition(panelLeft, y);
-    if (value) {
-      const valueX = label ? label.x + label.width : panelLeft;
-      value.setPosition(valueX, y);
-    }
-  });
-
   if (scene.timerText) scene.timerText.setPosition(width / 2, 8);
   if (scene.objectiveText) scene.objectiveText.setPosition(width / 2, 42);
-  if (scene.badgeSlotUnlockTimerText) {
-    scene.badgeSlotUnlockTimerText.setPosition(width / 2, 60);
-  }
+
+  scene._lastStatsHudSnapshot = null;
+  redrawStatsHudIfNeeded(scene, true);
 }
 
 function playDashboardStatBounce(scene, textObj) {
-  if (!scene.tweens || !textObj) return;
+  if (!scene.tweens || !textObj || !textObj.visible) return;
   const existing = scene.tweens.getTweensOf(textObj);
-  if (existing.length) existing.forEach((t) => t.remove());
+  if (existing.length) existing.forEach((tween) => tween.remove());
   textObj.setScale(1);
   scene.tweens.add({
     targets: textObj,
@@ -407,21 +614,10 @@ export function updateDashboard(scene) {
     }
   }
 
-  if (scene.hpValueText) {
-    let hpValueStr = "";
-    let hpColor = "#ffab91";
-    const baseCap = PLAYER_MAX_HP_CAP ?? 10;
-    const hpBonus = BadgeSystem.getMaxHpBonus(scene);
-    const cap = baseCap + hpBonus;
-    const hp = scene.playerHp ?? 0;
-    hpValueStr = `${hp}/${cap}`;
-    const ratio = cap > 0 ? hp / cap : 0;
-    if (ratio >= 0.7) hpColor = "#81c784";
-    else if (ratio < 0.3) hpColor = "#ef5350";
-    if (scene.hpLabelText) scene.hpLabelText.setColor(hpColor);
-    scene.hpValueText.setColor(hpColor);
-    updateStatWithBounce(scene, "hp", scene.hpValueText, hpValueStr);
-  }
+  const hpBonus = BadgeSystem.getMaxHpBonus(scene);
+  const hpCap = Math.max(1, (PLAYER_MAX_HP_CAP ?? 10) + hpBonus);
+  const hp = scene.playerHp ?? 0;
+  updateStatWithBounce(scene, "hp", scene.hpValueText, `${hp}/${hpCap}`);
 
   if (scene.items && scene.itemsValueText) {
     let count = 0;
@@ -430,74 +626,51 @@ export function updateDashboard(scene) {
       if (item.getData && item.getData("isFragment")) count += 1;
     });
     const maxF = 3 + (BadgeSystem.getMaxFragmentBonus(scene) || 0);
-    const fragmentsValueStr = `${count}/${maxF}`;
-    updateStatWithBounce(scene, "fragments", scene.itemsValueText, fragmentsValueStr);
+    updateStatWithBounce(scene, "fragments", scene.itemsValueText, `${count}/${maxF}`);
     updateFragmentCapWarning(scene, count >= maxF && maxF > 0);
   } else {
     updateFragmentCapWarning(scene, false);
   }
 
-  if (scene.nextCellValueText) {
-    const n = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
-    const maxC = (scene.cellMaxCount ?? CELL_MAX_COUNT) + (BadgeSystem.getCellMaxBonus(scene) || 0);
-    const cellsValueStr = `${n}/${maxC}`;
-    updateStatWithBounce(scene, "cells", scene.nextCellValueText, cellsValueStr);
+  const cellCount = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
+  const cellMax = (scene.cellMaxCount ?? CELL_MAX_COUNT) + (BadgeSystem.getCellMaxBonus(scene) || 0);
+  updateStatWithBounce(scene, "cells", scene.nextCellValueText, `${cellCount}/${cellMax}`);
+
+  const equipped = BadgeSystem.getEquippedBadges(scene) || [];
+  const equippedCount = equipped.filter((id) => !!id).length;
+  const slotCount = scene.badgeSlotCount ?? 3;
+  updateStatWithBounce(scene, "badges", scene.badgeValueText, `${equippedCount}/${slotCount}`);
+
+  const attackCount = scene.attackUpgradeCount ?? 0;
+  updateStatWithBounce(scene, "attack", scene.attackValueText, `+${attackCount}`);
+
+  const killsValueStr = String(scene.killCount ?? 0);
+  updateStatWithBounce(scene, "kills", scene.killsValueText, killsValueStr);
+  if (scene.killCounterText) {
+    scene.killCounterText.setText(`KILL ${killsValueStr}`);
   }
 
-  if (scene.badgeValueText) {
-    const equipped = BadgeSystem.getEquippedBadges(scene) || [];
-    const equippedCount = equipped.filter((id) => !!id).length;
-    const slotCount = scene.badgeSlotCount ?? 3;
-    const badgesValueStr = `${equippedCount}/${slotCount}`;
-    updateStatWithBounce(scene, "badges", scene.badgeValueText, badgesValueStr);
-  }
-
-  if (scene.attackValueText) {
-    const n = scene.attackUpgradeCount ?? 0;
-    const attackValueStr = `+${n}`;
-    updateStatWithBounce(scene, "attack", scene.attackValueText, attackValueStr);
-  }
-
-  if (scene.killsValueText) {
-    const killsValueStr = String(scene.killCount ?? 0);
-    updateStatWithBounce(scene, "kills", scene.killsValueText, killsValueStr);
-  }
-
-  if (scene.badgeSlotUnlockTimerText) {
-    const { remainingSeconds, allUnlocked } = getNextBadgeSlotUnlockRemaining(scene);
-    if (allUnlocked) {
-      scene.badgeSlotUnlockTimerText.setVisible(false);
-    } else {
-      const m = Math.floor(remainingSeconds / 60);
-      const s = remainingSeconds % 60;
-      const timeStr = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-      scene.badgeSlotUnlockTimerText.setText(t("common.nextBadgeSlotIn", { time: timeStr }));
-      scene.badgeSlotUnlockTimerText.setVisible(true);
-    }
-  }
+  redrawStatsHudIfNeeded(scene);
 }
 
-/** 오버레이용 대시보드 스탯 문자열 반환 (Kills 제외). 프래그먼트 오버레이 상단 스탯 바에 사용. HP 색상은 대시보드와 동일 비율 로직. */
 export function getDashboardStatsForOverlay(scene) {
   if (!scene) return { hp: "", hpColor: "", cells: "", attack: "", badges: "" };
 
-  let hp = "";
   let hpColor = "#ffab91";
   const baseCap = PLAYER_MAX_HP_CAP ?? 10;
   const hpBonus = BadgeSystem.getMaxHpBonus(scene);
   const cap = baseCap + hpBonus;
   const hpVal = scene.playerHp ?? 0;
-  hp = `${t("common.hp")} ${hpVal} / ${cap}`;
+  const hp = `${t("common.hp")} ${hpVal} / ${cap}`;
   const ratio = cap > 0 ? hpVal / cap : 0;
   if (ratio >= 0.7) hpColor = "#81c784";
   else if (ratio < 0.3) hpColor = "#ef5350";
 
-  let cells = "";
   const nCell = scene.cellActiveCount ?? scene.cellBaseCount ?? 1;
   const baseMax = scene.cellMaxCount ?? CELL_MAX_COUNT;
   const cellBonus = BadgeSystem.getCellMaxBonus(scene);
   const max = baseMax + cellBonus;
-  cells = `${t("common.cells")}: ${nCell}/${max}`;
+  const cells = `${t("common.cells")}: ${nCell}/${max}`;
 
   const nAttack = scene.attackUpgradeCount ?? 0;
   const attack = `${t("common.attack")}: +${nAttack}`;

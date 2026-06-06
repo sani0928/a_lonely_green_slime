@@ -65,6 +65,7 @@ export function enterPause(scene) {
   if (scene.isPaused || scene.isGameOver) return;
 
   scene.isPaused = true;
+  if (scene.statsHudContainer) scene.statsHudContainer.setVisible(false);
 
   if (scene.physics && scene.physics.world) {
     scene.physics.world.pause();
@@ -132,6 +133,7 @@ export function startResumeCountdown(scene) {
       if (scene.pauseTitleText) scene.pauseTitleText.setVisible(false);
       if (scene.pauseSubText) scene.pauseSubText.setVisible(false);
       if (scene.countdownText) scene.countdownText.setVisible(false);
+      if (scene.statsHudContainer) scene.statsHudContainer.setVisible(true);
 
       // 뱃지/업그레이드 선택 중에 일시정지에서 재개한 경우: 월드는 그대로 멈춰 두고 선택 화면만 다시 보이게 함
       if (!scene.isChoosingUpgrade) {

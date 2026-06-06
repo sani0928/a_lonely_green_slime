@@ -45,7 +45,7 @@
     <meta name="msapplication-TileImage" content="/assets/favicons/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
     <!-- 버전: src/config/constants.js GAME_VERSION -->
-    <meta name="version" content="0.9.4" />
+    <meta name="version" content="0.9.5" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -104,6 +104,27 @@
             </div>
           </div>
           <div id="leaderboard-list" class="leaderboard-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="leaderboard-overlay" class="guide-overlay" aria-hidden="true">
+      <div class="leaderboard-overlay-backdrop guide-overlay-backdrop"></div>
+      <div class="guide-overlay-panel leaderboard-overlay-panel">
+        <h2 class="guide-overlay-title" id="leaderboard-overlay-title">Top Players</h2>
+        <div class="leaderboard leaderboard-overlay-board">
+          <div class="leaderboard-header">
+            <h3 class="leaderboard-title">Top 20 Players</h3>
+            <div class="leaderboard-period" id="leaderboard-overlay-period">
+              <button type="button" class="period-btn" data-period="7d">7 days</button>
+              <button type="button" class="period-btn active" data-period="30d">30 days</button>
+              <button type="button" class="period-btn" data-period="1y">1 year</button>
+            </div>
+          </div>
+          <div id="leaderboard-overlay-list" class="leaderboard-list"></div>
+        </div>
+        <div class="guide-overlay-footer">
+          <button type="button" id="leaderboard-overlay-close" class="primary-btn">Close</button>
         </div>
       </div>
     </div>
@@ -176,6 +197,12 @@
     <div id="pause-overlay">
       <div class="pause-title">Paused</div>
       <div class="pause-sub">Press ESC to resume</div>
+      <div id="pause-stats-bar" class="pause-stats-bar" aria-hidden="true">
+        <span id="pause-stats-hp" class="overlay-stats-item"></span>
+        <span id="pause-stats-cells" class="overlay-stats-item"></span>
+        <span id="pause-stats-attack" class="overlay-stats-item"></span>
+        <span id="pause-stats-badges" class="overlay-stats-item"></span>
+      </div>
       <div id="pause-badge-slots"></div>
       <div class="pause-buttons">
         <button type="button" id="pause-btn-main" class="secondary-btn">To Main</button>
