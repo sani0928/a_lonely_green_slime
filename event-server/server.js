@@ -1,8 +1,25 @@
 import crypto from "node:crypto";
+import fs from "node:fs";
 import http from "node:http";
 import { createClient } from "redis";
 import { WebSocketServer } from "ws";
 import { EventGameCore } from "./game-core.js";
+
+function loadLocalEnv(filename, inheritedKeys) {
+  if (!fs.existsSync(filename)) return;
+  for (const rawLine of fs.readFileSync(filename, "utf8").split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#") || !line.includes("=")) continue;
+    const separator = line.indexOf("=");
+    const key = line.slice(0, separator).trim();
+    const value = line.slice(separator + 1).trim().replace(/^['"]|['"]$/g, "");
+    if (key && !inheritedKeys.has(key)) process.env[key] = value;
+  }
+}
+
+const inheritedEnvironment = new Set(Object.keys(process.env));
+loadLocalEnv(".env", inheritedEnvironment);
+loadLocalEnv(".env.local", inheritedEnvironment);
 
 const port = Number(process.env.PORT || 8081);
 const redisUrl = process.env.EVENT_REDIS_URL || process.env.REDIS_URL;

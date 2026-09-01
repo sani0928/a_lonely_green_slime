@@ -60,6 +60,39 @@ https://<staging-django-domain>/auth/google/callback/
 
 운영과 staging은 OAuth Client를 분리하는 편이 권장된다. 하나의 클라이언트를 공유한다면 staging redirect URI를 추가하고, 테스트 계정만 허용한다.
 
+## 로컬 앱에서 Staging DB 사용
+
+`npm run dev`는 Vite, 로컬 Django(`:8000`), 로컬 이벤트 서버(`:8081`)를 함께 실행한다. 두 로컬 서버는 Railway staging의 DB와 Redis에 연결하고, 브라우저는 로컬 Django API를 호출한다.
+
+1. Railway staging의 `Postgres`와 `Redis` 서비스에서 **Settings -> Networking -> Public Access**를 각각 추가한다.
+2. `Postgres`의 `DATABASE_PUBLIC_URL`과 `Redis`의 `REDIS_PUBLIC_URL`을 복사한다. `DATABASE_URL`과 `REDIS_URL`은 Railway 내부 전용이므로 로컬에서 사용할 수 없다.
+3. `backend/.env.example`을 `backend/.env.local`로 복사하고, 아래 값을 staging 공개 URL로 바꾼다.
+
+```env
+DATABASE_URL=<Postgres의 DATABASE_PUBLIC_URL>
+EVENT_REDIS_URL=<Redis의 REDIS_PUBLIC_URL>
+EVENT_INTERNAL_SECRET=<staging Django와 이벤트 서버가 공유할 개발용 비밀값>
+EVENT_GAME_WS_URL=ws://localhost:8081
+GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8000/auth/google/callback/
+```
+
+4. `event-server/.env.example`을 `event-server/.env.local`로 복사한다. `EVENT_REDIS_URL`과 `EVENT_INTERNAL_SECRET`은 Django와 같은 staging 값을 사용하고, 다음 값을 확인한다.
+
+```env
+EVENT_FINALIZE_URL=http://localhost:8000/api/events/internal/finalize/
+EVENT_ALLOWED_ORIGIN=http://localhost:5173
+```
+
+5. Google Cloud Console에 로컬 redirect URI를 추가한다.
+
+```text
+http://localhost:8000/auth/google/callback/
+```
+
+6. 처음 한 번만 `backend` 폴더에서 `.\.venv\Scripts\python.exe manage.py migrate`를 실행한 뒤, 저장소 루트에서 `npm run dev`를 실행한다.
+
+`backend/.env.local`과 `event-server/.env.local`은 Git에서 제외된다. Railway staging의 `DATABASE_PUBLIC_URL`과 `REDIS_PUBLIC_URL`만 사용하며, 운영 데이터베이스·Redis URL을 복사해서는 안 된다. 공개 TCP 연결은 네트워크 egress 비용이 발생할 수 있으므로 테스트를 마치면 Public Access를 해제한다.
+
 ## 배포 전 확인
 
 1. Django `https://<staging-django-domain>/health/`가 `ok`를 반환하는지 확인한다.

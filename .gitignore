@@ -28,6 +28,7 @@ backend/*.log
 backend/staticfiles/
 backend/media/
 *.local
+*.example
 
 # Environment (secrets)
 .env

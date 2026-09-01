@@ -3,6 +3,25 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_local_env(path: Path, inherited_keys: set[str]) -> None:
+    """Load local-only settings without overriding variables supplied by Railway."""
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key and key not in inherited_keys:
+            os.environ[key] = value.strip().strip('"').strip("'")
+
+
+_inherited_environment = set(os.environ)
+_load_local_env(BASE_DIR / ".env", _inherited_environment)
+_load_local_env(BASE_DIR / ".env.local", _inherited_environment)
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-change-in-production")
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
