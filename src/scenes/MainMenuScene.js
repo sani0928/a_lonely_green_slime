@@ -314,7 +314,7 @@ export default class MainMenuScene extends Phaser.Scene {
     const eventBg = this.add.graphics().setDepth(2);
     drawPixelButton(eventBg, (width - btnW) / 2, eventY, btnW, btnH, 0x6b4f1d, 0xffc857, PIXEL.borderDark, 2);
     this.eventText = this.add
-      .text(width / 2, eventY + btnH / 2, "Weekly Event", {
+      .text(width / 2, eventY + btnH / 2, t("menu.weeklyEvent"), {
         fontFamily: "Mulmaru", fontSize: "20px", color: "#fff1c1",
       })
       .setOrigin(0.5)

@@ -32,6 +32,7 @@
     "leaderboard": "Rankings",
     "settings": "Settings",
     "howToPlay": "How to play",
+    "weeklyEvent": "Weekly Event",
     "howToPlayClose": "Close",
     "guideTabIntro": "Game intro",
     "guideTabBadges": "Badge list",
@@ -210,6 +211,29 @@
       "name": "Smaller",
       "description": "Character becomes **slightly** smaller."
     }
+  },
+  "event": {
+    "title": "Weekly Ranking Event",
+    "nicknamePlaceholder": "Event nickname (cannot be changed)",
+    "createNickname": "Create",
+    "consent": "I agree: runs last up to 60 minutes, only verified server records count, and prize email is used only for delivery.",
+    "googleLogin": "Sign in with Google",
+    "enter": "Enter event",
+    "highestScore": "Highest score",
+    "totalScore": "Total score",
+    "noVerifiedRecords": "No verified records yet.",
+    "maintenance": "Weekly maintenance: Sunday 00:00-05:59 (KST).",
+    "closed": "The event is closed.",
+    "endsAt": "Event ends {{endsAt}}. A run can last up to 60 minutes.",
+    "consentRequired": "You must accept the event rules.",
+    "requestFailed": "Unable to load the event. Please try again.",
+    "serverAuthoritative": "Server-authoritative event run",
+    "webSocketNotConfigured": "Event WebSocket is not configured.",
+    "finished": "Event finished. Verified score: {{score}}",
+    "runEnded": "The event run has ended.",
+    "reconnecting": "Connection lost. Restoring your one allowed 30-second pause...",
+    "reconnectFailed": "Unable to restore the event run.",
+    "hud": "EVENT {{time}}  SCORE {{score}}"
   },
   "phaseAlert": {
     "phase2": "System Error Detected!",

@@ -1,6 +1,6 @@
 ﻿/** Score/leaderboard API helpers */
 const API_BASE_URL =
-  window.GAME_API_BASE_URL || "http://localhost:8000";
+  import.meta.env.VITE_GAME_API_BASE_URL || window.GAME_API_BASE_URL || "http://localhost:8000";
 
 const ANONYMOUS_ID_KEY = "als_anonymous_id";
 const LEGACY_ANONYMOUS_SEQ_KEY = "als_anonymous_seq";

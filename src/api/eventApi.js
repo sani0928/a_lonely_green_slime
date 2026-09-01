@@ -1,4 +1,4 @@
-const API_BASE_URL = window.GAME_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_GAME_API_BASE_URL || window.GAME_API_BASE_URL || "http://localhost:8000";
 
 function csrfToken() {
   const item = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("csrftoken="));
