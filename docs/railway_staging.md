@@ -13,6 +13,8 @@
 
 Railway에서 환경을 복제하면 DB와 네트워크도 새 환경으로 분리된다. sealed secret은 복제되지 않으므로 아래 비밀값은 staging에 새로 입력한다.
 
+이벤트 서버는 `package-lock.json`을 감지한 Railway의 기본 Node 설치 단계에 맡긴다. 서비스 Settings의 Build Command에 별도로 `npm ci`를 입력하지 않는다. `npm ci`가 `node_modules/.cache` 잠금 오류로 실패했다면 위 설정을 비운 뒤 같은 커밋을 다시 배포한다.
+
 ## Staging 변수
 
 ### Staging Django 서비스
