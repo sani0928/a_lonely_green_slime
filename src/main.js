@@ -1,6 +1,7 @@
 // Phaser bootstrap and scene registration.
 import MainMenuScene from "./scenes/MainMenuScene.js";
 import GameScene from "./scenes/GameScene.js";
+import EventGameScene from "./scenes/EventGameScene.js";
 import { setupOverlayCallbacks } from "./ui/overlayUi.js";
 import { detectLocale, setLocale } from "./i18n.js";
 
@@ -26,7 +27,7 @@ const config = {
       gravity: { y: 0 },
     },
   },
-  scene: [MainMenuScene, GameScene],
+  scene: [MainMenuScene, GameScene, EventGameScene],
 };
 
 window.addEventListener("load", async () => {

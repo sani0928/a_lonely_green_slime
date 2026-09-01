@@ -6,9 +6,10 @@
 
 ### 1.1 식별자 생성
 - 프론트엔드(`src/api/scoreApi.js`)에서 브라우저 `localStorage`를 사용해 식별자를 만든다.
-- `anonymous_id`: `anon_1`, `anon_2` 같은 유저 단위 단순 ID
-- `run_id`: `run_1`, `run_2` 같은 판(run) 단위 단순 ID
-- `anonymous_id`는 재방문 시 유지되고, `run_id`는 새 게임 시작 때 증가한다.
+- `anonymous_id`: `anon_<random>` 형태의 브라우저 단위 익명 ID
+- `run_id`: `run_<random>` 형태의 판(run) 단위 ID
+- `anonymous_id`는 재방문 시 유지되고, `run_id`는 새 게임 시작 때마다 새로 생성된다.
+- 최신 구현은 `crypto.randomUUID()`가 가능하면 이를 사용하고, 지원되지 않는 환경에서는 timestamp + random 문자열 조합으로 대체한다.
 
 ### 1.2 플레이 중 수집 (메모리)
 - `GameScene`에서 게임 진행 중 로그를 메모리 변수에 누적한다.
@@ -24,6 +25,7 @@
 - `endGame()`에서 `submitPlayLog(payload)`를 호출한다.
 - `payload`를 JSON으로 `POST /api/playlogs/`에 전송한다.
 - 전송 데이터는 시작/종료 시각, 플레이 시간, 피격 통계, 킬/점수, 스냅샷 배열을 포함한다.
+- 점수 제출 API(`/api/scores/`)로는 동일 런의 `play_seconds`도 함께 전달되어 리더보드에 플레이 시간이 표시된다.
 
 ### 1.4 백엔드 저장
 - Django `playlogs` 앱의 `playlog_create` 뷰가 요청을 받는다.
@@ -35,8 +37,8 @@
 | 칼럼 | 타입 | 의미 |
 |---|---|---|
 | `id` | bigint PK | 로그 행 ID |
-| `anonymous_id` | varchar(64), index | 브라우저 단위 익명 유저 ID (`anon_n`) |
-| `run_id` | varchar(64), index | 한 판(run) 식별자 (`run_n`) |
+| `anonymous_id` | varchar(64), index | 브라우저 단위 익명 유저 ID (`anon_<random>`) |
+| `run_id` | varchar(64), index | 한 판(run) 식별자 (`run_<random>`) |
 | `started_at` | datetime, nullable | 게임 시작 시각(프론트 기준 ISO 문자열) |
 | `ended_at` | datetime, nullable | 게임 종료 시각 |
 | `play_seconds` | float | 총 플레이 시간(초) |
@@ -78,6 +80,8 @@
   - 예: 6~9분 구간에서 급격히 많이 죽으면 중반 스파이크 의심
 - `is_clear` 비율로 목표 난이도 확인
   - 예: 클리어율이 과도하게 낮으면 후반 압박 완화 필요
+- 15분 이후 생존 시간 분포로 Endless 구간 압박 확인
+  - 예: 클리어 직후 급사 비율이 높으면 15분 이후 난이도 상승이 과도할 가능성
 
 ### 4.2 피격 원인 분석
 - `contact_hits` vs `projectile_hits` 비교로 사망 주원인 분리
@@ -98,3 +102,4 @@
 - 현재 방식은 비회원 기반의 익명 로그라 기기/브라우저가 바뀌면 다른 유저로 잡히는 한계가 존재한다.
 - 밸런스 조정 목적에는 충분히 유효하며, 구현/운영 비용이 낮다.
 - 분석 정확도를 높이려면 날짜 범위(패치 전/후)로 나눠 비교하는 것을 권장한다.
+- `final_score`는 사망 시점 기준 최종 점수이며, `is_clear=true`인 런은 15분 달성 후 사망 시점에 **1.5배 보너스가 반영된 값**이다.

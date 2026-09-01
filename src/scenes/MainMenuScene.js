@@ -9,6 +9,7 @@ import { showSettingsOverlay } from "../ui/settingsOverlay.js";
 import { showGuideOverlay } from "../ui/guideOverlay.js";
 import { showLeaderboardOverlay } from "../ui/leaderboardOverlay.js";
 import { showNicknameOverlay } from "../ui/nicknameOverlay.js";
+import { showEventOverlay } from "../ui/eventOverlay.js";
 import {
   applyBgmEnabled,
   getBgmEnabled,
@@ -175,6 +176,7 @@ export default class MainMenuScene extends Phaser.Scene {
     const rankingY = startY + btnH + btnGap;
     const setY = rankingY + btnH + btnGap;
     const guideY = setY + btnH + btnGap;
+    const eventY = guideY + btnH + btnGap;
 
     // Start button opens the nickname overlay first.
     const startBg = this.add.graphics().setDepth(2);
@@ -185,12 +187,14 @@ export default class MainMenuScene extends Phaser.Scene {
       setX: (width - btnW) / 2,
       setY,
       guideY,
+      eventY,
       btnW,
       btnH,
       startBg: null,
       rankingBg: null,
       setBg: null,
       guideBg: null,
+      eventBg: null,
     };
     drawPixelButton(
       startBg,
@@ -307,6 +311,21 @@ export default class MainMenuScene extends Phaser.Scene {
     });
     this.menuBtn.guideBg = guideBg;
 
+    const eventBg = this.add.graphics().setDepth(2);
+    drawPixelButton(eventBg, (width - btnW) / 2, eventY, btnW, btnH, 0x6b4f1d, 0xffc857, PIXEL.borderDark, 2);
+    this.eventText = this.add
+      .text(width / 2, eventY + btnH / 2, "Weekly Event", {
+        fontFamily: "Mulmaru", fontSize: "20px", color: "#fff1c1",
+      })
+      .setOrigin(0.5)
+      .setDepth(3);
+    const eventHit = this.add.zone(width / 2, eventY + btnH / 2, btnW, btnH).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.eventHit = eventHit;
+    eventHit.on("pointerdown", () => showEventOverlay(this));
+    eventHit.on("pointerover", () => this.drawMenuButtonState("event", true));
+    eventHit.on("pointerout", () => this.drawMenuButtonState("event", false));
+    this.menuBtn.eventBg = eventBg;
+
     this.paradeSprites = [];
     const b = {
       left: MARGIN,
@@ -401,7 +420,8 @@ export default class MainMenuScene extends Phaser.Scene {
     const rankingY = startY + btnH + btnGap;
     const setY = rankingY + btnH + btnGap;
     const guideY = setY + btnH + btnGap;
-    return { width, height, btnW, btnH, x, startY, rankingY, setY, guideY };
+    const eventY = guideY + btnH + btnGap;
+    return { width, height, btnW, btnH, x, startY, rankingY, setY, guideY, eventY };
   }
 
   redrawScanlines(width, height) {
@@ -415,7 +435,7 @@ export default class MainMenuScene extends Phaser.Scene {
   }
 
   drawMenuButtonState(kind, isHover = false) {
-    const { btnW, btnH, x, startY, rankingY, setY, guideY } = this.getMenuLayout();
+    const { btnW, btnH, x, startY, rankingY, setY, guideY, eventY } = this.getMenuLayout();
     if (kind === "start" && this.menuBtn?.startBg) {
       this.menuBtn.startBg.clear();
       drawPixelButton(
@@ -432,6 +452,11 @@ export default class MainMenuScene extends Phaser.Scene {
       return;
     }
 
+    if (kind === "event" && this.menuBtn?.eventBg) {
+      this.menuBtn.eventBg.clear();
+      drawPixelButton(this.menuBtn.eventBg, x, eventY, btnW, btnH, isHover ? 0x806126 : 0x6b4f1d, 0xffc857, PIXEL.borderDark, 2);
+      return;
+    }
     const graphics =
       kind === "ranking"
         ? this.menuBtn?.rankingBg
@@ -455,7 +480,7 @@ export default class MainMenuScene extends Phaser.Scene {
   }
 
   handleResize() {
-    const { width, height, btnW, btnH, startY, rankingY, setY, guideY } = this.getMenuLayout();
+    const { width, height, btnW, btnH, startY, rankingY, setY, guideY, eventY } = this.getMenuLayout();
 
     this.redrawScanlines(width, height);
     if (this.titleText) {
@@ -469,16 +494,19 @@ export default class MainMenuScene extends Phaser.Scene {
     this.drawMenuButtonState("ranking", false);
     this.drawMenuButtonState("settings", false);
     this.drawMenuButtonState("guide", false);
+    this.drawMenuButtonState("event", false);
 
     if (this.startText) this.startText.setPosition(width / 2, startY + btnH / 2);
     if (this.rankingText) this.rankingText.setPosition(width / 2, rankingY + btnH / 2);
     if (this.settingsText) this.settingsText.setPosition(width / 2, setY + btnH / 2);
     if (this.guideText) this.guideText.setPosition(width / 2, guideY + btnH / 2);
+    if (this.eventText) this.eventText.setPosition(width / 2, eventY + btnH / 2);
 
     if (this.startHit) this.startHit.setPosition(width / 2, startY + btnH / 2).setSize(btnW, btnH);
     if (this.rankingHit) this.rankingHit.setPosition(width / 2, rankingY + btnH / 2).setSize(btnW, btnH);
     if (this.setHit) this.setHit.setPosition(width / 2, setY + btnH / 2).setSize(btnW, btnH);
     if (this.guideHit) this.guideHit.setPosition(width / 2, guideY + btnH / 2).setSize(btnW, btnH);
+    if (this.eventHit) this.eventHit.setPosition(width / 2, eventY + btnH / 2).setSize(btnW, btnH);
 
     this.menuBounds = {
       left: MARGIN,
@@ -699,6 +727,7 @@ export default class MainMenuScene extends Phaser.Scene {
     this.rankingHit?.disableInteractive();
     this.setHit?.disableInteractive();
     this.guideHit?.disableInteractive();
+    this.eventHit?.disableInteractive();
     if (this.paradeSprites) {
       this.paradeSprites.forEach((s) => {
         if (s.active && s.getData("entityIndex") !== PLAYER_ENTITY_INDEX) {
@@ -723,6 +752,7 @@ export default class MainMenuScene extends Phaser.Scene {
     safeSetInteractive(this.rankingHit);
     safeSetInteractive(this.setHit);
     safeSetInteractive(this.guideHit);
+    safeSetInteractive(this.eventHit);
 
     if (this.paradeSprites) {
       this.paradeSprites.forEach((s) => {
@@ -755,6 +785,10 @@ export default class MainMenuScene extends Phaser.Scene {
       m.guideBg.clear();
       drawPixelButton(m.guideBg, m.setX, m.guideY, m.btnW, m.btnH, PIXEL.btnSubFill, PIXEL.btnSubHighlight, PIXEL.borderDark, 2);
     }
+    if (m?.eventBg) {
+      m.eventBg.clear();
+      drawPixelButton(m.eventBg, m.setX, m.eventY, m.btnW, m.btnH, 0x6b4f1d, 0xffc857, PIXEL.borderDark, 2);
+    }
   }
 
   updateMenuBgmToggleText() {
@@ -780,5 +814,10 @@ export default class MainMenuScene extends Phaser.Scene {
     this.time.delayedCall(320, () => {
       this.scene.start("MainScene", data);
     });
+  }
+
+  startEventGame(entry) {
+    stopSceneBgm(this, 300);
+    this.time.delayedCall(320, () => this.scene.start("EventGame", entry));
   }
 }

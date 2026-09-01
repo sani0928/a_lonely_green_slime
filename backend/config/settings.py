@@ -21,6 +21,8 @@ INSTALLED_APPS = [
     "scores",
     "feedback",
     "playlogs",
+    "accounts",
+    "events",
 ]
 
 MIDDLEWARE = [
@@ -102,7 +104,15 @@ CSRF_TRUSTED_ORIGINS = _split_csv_env(
         ]
     ),
 )
+CORS_ALLOW_CREDENTIALS = True
 
 # HTTPS 환경(Railway 커스텀 도메인)에서만 secure 쿠키를 사용한다.
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "")
+GOOGLE_OAUTH_REDIRECT_URI = os.environ.get("GOOGLE_OAUTH_REDIRECT_URI", "")
+EVENT_INTERNAL_SECRET = os.environ.get("EVENT_INTERNAL_SECRET", "")
+EVENT_REDIS_URL = os.environ.get("EVENT_REDIS_URL", os.environ.get("REDIS_URL", ""))
+EVENT_GAME_WS_URL = os.environ.get("EVENT_GAME_WS_URL", "")

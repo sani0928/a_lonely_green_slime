@@ -1068,3 +1068,55 @@ canvas {
   gap: 10px;
   justify-content: flex-end;
 }
+
+/* === Weekly event === */
+.event-overlay-panel {
+  width: min(720px, 92vw);
+  max-height: min(760px, 86vh);
+  overflow-y: auto;
+}
+.event-overlay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+.event-consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+  color: #d5d5d5;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.event-consent-row input {
+  margin-top: 3px;
+}
+.event-board-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+.event-board-grid section {
+  min-height: 140px;
+  padding: 12px;
+  border: 1px solid rgba(255, 200, 87, 0.3);
+  background: rgba(255, 200, 87, 0.06);
+}
+.event-board-grid h3 {
+  margin: 0 0 8px;
+  color: #ffe29a;
+  font-size: 15px;
+}
+.event-board-grid ol {
+  margin: 0;
+  padding-left: 24px;
+  color: #e9e9e9;
+  font-size: 13px;
+  line-height: 1.7;
+}
+@media (max-width: 560px) {
+  .event-board-grid { grid-template-columns: 1fr; }
+}
