@@ -1,4 +1,5 @@
 import { hasBadge } from "./badgeSystem.js";
+import { advanceCellAngle, cellPosition } from "../core/cellRules.js";
 
 const POOL_MAX_CELLS = 24;
 
@@ -177,12 +178,18 @@ export function updateCellProjectiles(scene, dt) {
   const player = scene.player;
   if (!player) return;
 
-  scene.cellAngle += scene.cellRotationSpeed * dt;
+  const coreCells = {
+    angle: scene.cellAngle,
+    activeCount: scene.cellActiveCount || scene.cellBaseCount || 1,
+    radius: scene.cellBaseRadius,
+    rotationSpeed: scene.cellRotationSpeed,
+  };
+  advanceCellAngle(coreCells, dt);
+  scene.cellAngle = coreCells.angle;
 
   const activeCount =
     scene.cellActiveCount || scene.cellBaseCount || 4;
 
-  const radius = scene.cellBaseRadius;
 
   const bullets = scene.bullets.getChildren();
   const max = bullets.length;
@@ -199,10 +206,9 @@ export function updateCellProjectiles(scene, dt) {
       b.setData("cellIndex", i);
 
       // 현재 프레임 기준 궤도상 위치 계산
-      const angle =
-        scene.cellAngle + (i / activeCount) * Math.PI * 2;
-      const cellX = player.x + Math.cos(angle) * radius;
-      const cellY = player.y + Math.sin(angle) * radius;
+      const position = cellPosition(player, { ...coreCells, activeCount }, i);
+      const cellX = position.x;
+      const cellY = position.y;
 
       // 적 공격 후 궤도로 돌아오는 중: 플레이어 속도에 맞춰 복귀 속도 동기화
       if (b.getData("returning")) {

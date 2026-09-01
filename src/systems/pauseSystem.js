@@ -73,6 +73,9 @@ export function enterPause(scene) {
   if (scene.spawnEvent) {
     scene.spawnEvent.paused = true;
   }
+  if (scene.serverControlled && scene.socket?.readyState === WebSocket.OPEN) {
+    scene.socket.send(JSON.stringify({ type: "pause" }));
+  }
   pauseInvincibility(scene);
 
   if (typeof window.showPauseOverlay === "function") {
@@ -136,7 +139,7 @@ export function startResumeCountdown(scene) {
       if (scene.statsHudContainer) scene.statsHudContainer.setVisible(true);
 
       // 뱃지/업그레이드 선택 중에 일시정지에서 재개한 경우: 월드는 그대로 멈춰 두고 선택 화면만 다시 보이게 함
-      if (!scene.isChoosingUpgrade) {
+      if (!scene.isChoosingUpgrade && !scene.serverControlled) {
         if (scene.physics && scene.physics.world) {
           scene.physics.world.resume();
         }
@@ -144,6 +147,9 @@ export function startResumeCountdown(scene) {
           scene.spawnEvent.paused = false;
         }
         resumeInvincibility(scene);
+      }
+      if (scene.serverControlled && scene.socket?.readyState === WebSocket.OPEN) {
+        scene.socket.send(JSON.stringify({ type: "resume" }));
       }
     }
   };

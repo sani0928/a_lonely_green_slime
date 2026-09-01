@@ -57,17 +57,24 @@ import {
   stopSceneBgm,
   switchSceneBgm,
 } from "../systems/bgmSystem.js";
+import { createSeededRandom } from "../core/random.js";
+import { createRunState } from "../core/runState.js";
 
 export default class GameScene extends Phaser.Scene {
-  constructor() {
-    super("MainScene");
+  constructor(sceneKey = "MainScene") {
+    super(sceneKey);
   }
 
   preload() {
     preloadGame(this);
   }
 
-  create() {
+  create(data = {}) {
+    this.serverControlled = data.serverControlled === true;
+    this.random = data.authoritativeSeed
+      ? createSeededRandom(data.authoritativeSeed)
+      : Math.random;
+    const runState = createRunState();
     const { width, height } = this.scale;
     const cam = this.cameras.main;
     // Fade in when entering from the main menu.
@@ -82,16 +89,16 @@ export default class GameScene extends Phaser.Scene {
       onComplete: () => fadeInCurtain.destroy(),
     });
 
-    this.score = 0;
-    this.killCount = 0;
-    this.playerMaxHp = PLAYER_MAX_HP_CAP;
-    this.playerHp = PLAYER_BASE_HP;
-    this.playerAttackPower = PLAYER_BASE_ATTACK;
+    this.score = runState.score;
+    this.killCount = runState.killCount;
+    this.playerMaxHp = runState.player.maxHp;
+    this.playerHp = runState.player.hp;
+    this.playerAttackPower = runState.player.attack;
     this.isGameOver = false;
     this.isClearAchieved = false;
     this.clearAchievedAtSec = null;
     this.clearAchievedAnnounced = false;
-    this.elapsedTime = 0;
+    this.elapsedTime = runState.elapsedTime;
     this.playLogSent = false;
     this.playLogStartedAt = new Date().toISOString();
     this.playLogAnonymousId = getOrCreateAnonymousId();
@@ -141,8 +148,8 @@ export default class GameScene extends Phaser.Scene {
       });
     };
 
-    this.worldWidth = WORLD_WIDTH;
-    this.worldHeight = WORLD_HEIGHT;
+    this.worldWidth = runState.worldWidth;
+    this.worldHeight = runState.worldHeight;
     this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.bgFill = this.add
       .rectangle(0, 0, this.worldWidth, this.worldHeight, 0x0c1218)
@@ -195,7 +202,7 @@ export default class GameScene extends Phaser.Scene {
       playerTextureKey
     );
     this.player.setCollideWorldBounds(true);
-    this.basePlayerSpeed = PLAYER_BASE_SPEED;
+    this.basePlayerSpeed = runState.player.speed;
     this.playerSpeed = this.basePlayerSpeed;
 
     if (USE_PIXEL_SPRITES) {
@@ -269,11 +276,11 @@ export default class GameScene extends Phaser.Scene {
     this.enemyDifficultyFactor = 1;
     this.enemySpeedFactor = 1;
 
-    this.cellBaseCount = CELL_BASE_COUNT;
+    this.cellBaseCount = runState.cells.activeCount;
     this.cellMaxCount = CELL_MAX_COUNT;
-    this.cellBaseRadius = CELL_BASE_RADIUS;
+    this.cellBaseRadius = runState.cells.radius;
     this.cellAngle = 0;
-    this.cellRotationSpeed = CELL_BASE_ROTATION_SPEED;
+    this.cellRotationSpeed = runState.cells.rotationSpeed;
 
     this.nextItemKillThreshold = INITIAL_ITEM_KILL_THRESHOLD;
     this.itemSpawnCount = 0; // Number of spawned fragment chests, used for progressive kill thresholds.
@@ -322,6 +329,12 @@ export default class GameScene extends Phaser.Scene {
     HudSystem.updateDashboard(this);
 
     CollisionSystem.registerCollisions(this);
+    // Member runs render authoritative snapshots. Physics and the local spawn
+    // event must never advance independently from the game server.
+    if (this.serverControlled) {
+      this.spawnEvent.paused = true;
+      this.physics.world.pause();
+    }
     if (DEV_MODE) {
       this.setupDevDebugTools();
     }
@@ -682,6 +695,11 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (this.serverControlled) {
+      this.updateServerPresentation(time, delta);
+      return;
+    }
+
     const dt = delta / 1000;
 
     // Stop gameplay updates while paused (UI timers still run via Phaser Time).
@@ -829,6 +847,10 @@ export default class GameScene extends Phaser.Scene {
 
     HudSystem.updateDashboard(this);
   }
+
+  // Subclasses use this hook to copy validated server snapshots into the
+  // existing GameScene renderer without running a second local simulation.
+  updateServerPresentation() {}
 
   endGame(isClear = false) {
     if (this.isGameOver) {

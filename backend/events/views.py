@@ -42,6 +42,7 @@ def _serialize_status(request):
         "nickname": account.event_nickname if account else None,
         "consented": bool(account and EventConsent.objects.filter(user=request.user, version=CONSENT_VERSION).exists()),
         "game_ws_url": settings.EVENT_GAME_WS_URL,
+        "authoritative_ready": settings.EVENT_AUTHORITATIVE_CORE_READY,
     }
 
 
@@ -74,6 +75,10 @@ def create_entry(request):
         return JsonResponse({"detail": "New event entry has closed."}, status=409)
     if not EventConsent.objects.filter(user=request.user, version=CONSENT_VERSION).exists():
         return JsonResponse({"detail": "Event consent is required."}, status=403)
+    # The previous simplified WebSocket scene does not use the normal game's
+    # rules, so it must never certify a ranking score.
+    if not settings.EVENT_AUTHORITATIVE_CORE_READY:
+        return JsonResponse({"detail": "The verified event game is being prepared."}, status=503)
     run = EventRun.objects.filter(event=info["event"], user=request.user, status=EventRun.Status.ACTIVE).first()
     if run is None:
         run = EventRun.objects.create(

@@ -32,6 +32,7 @@ import {
 import { showScoreGain } from "./hudSystem.js";
 import { BADGES } from "../badges/badgeDefinitions.js";
 import { t } from "../i18n.js";
+import { randomFrom, randomInt } from "../core/random.js";
 
 /** Skip reward score when skipping a badge draw result, by rarity. */
 const SKIP_SCORE_BY_RARITY = { normal: 500, epic: 1000, unique: 3000 };
@@ -61,8 +62,8 @@ export function spawnUpgradeItem(scene) {
   }
 
   const margin = ITEM_SPAWN_MARGIN;
-  const x = Phaser.Math.Between(margin, scene.worldWidth - margin);
-  const y = Phaser.Math.Between(margin, scene.worldHeight - margin);
+  const x = randomInt(scene, margin, scene.worldWidth - margin);
+  const y = randomInt(scene, margin, scene.worldHeight - margin);
 
   let item;
 
@@ -186,11 +187,11 @@ export function spawnPachinkoTicket(scene, x, y, options = {}) {
 
   if (options && options.burst) {
     const angle =
-      typeof options.angle === "number" ? options.angle : Math.random() * Math.PI * 2;
+      typeof options.angle === "number" ? options.angle : randomFrom(scene)() * Math.PI * 2;
     const speed =
       typeof options.speed === "number"
         ? options.speed
-        : Phaser.Math.Between(160, 260);
+        : randomInt(scene, 160, 260);
     const stopAfter =
       typeof options.stopAfter === "number" ? options.stopAfter : 0.45;
     ticket.setData("burstStopAt", (scene.elapsedTime || 0) + stopAfter);
@@ -236,11 +237,11 @@ export function spawnHealthPotion(scene, x, y, options = {}) {
 
   if (options && options.burst) {
     const angle =
-      typeof options.angle === "number" ? options.angle : Math.random() * Math.PI * 2;
+      typeof options.angle === "number" ? options.angle : randomFrom(scene)() * Math.PI * 2;
     const speed =
       typeof options.speed === "number"
         ? options.speed
-        : Phaser.Math.Between(150, 240);
+        : randomInt(scene, 150, 240);
     const stopAfter =
       typeof options.stopAfter === "number" ? options.stopAfter : 0.45;
     potion.setData("burstStopAt", (scene.elapsedTime || 0) + stopAfter);
@@ -309,9 +310,9 @@ function spawnCoinsForEnemy(scene, enemy, baseScore) {
   if (typeof baseScore !== "number" || baseScore <= 0) return;
 
   const x =
-    enemy.x + Phaser.Math.Between(-4, 4);
+    enemy.x + randomInt(scene, -4, 4);
   const y =
-    enemy.y + Phaser.Math.Between(-4, 4);
+    enemy.y + randomInt(scene, -4, 4);
 
   let coin;
 
@@ -407,9 +408,9 @@ export function onBulletHitEnemy(scene, bullet, enemy) {
 
   // Base damage with per-hit variance (~80% to 120%).
   const baseDamage = scene.playerAttackPower || 1;
-  const factor = Phaser.Math.FloatBetween(0.8, 1.2);
+  const factor = 0.8 + randomFrom(scene)() * 0.4;
   let damage = Math.max(1, Math.round(baseDamage * factor));
-  const isCritical = hasBadge(scene, "critical") && Math.random() < 0.2;
+  const isCritical = hasBadge(scene, "critical") && randomFrom(scene)() < 0.2;
   if (isCritical) damage *= 2;
 
   // Capture base score before destroy; score metadata may be unavailable afterward.
@@ -740,7 +741,7 @@ export function onPlayerPickupItem(scene, player, item) {
   };
 
   const showBadgeDrawStep = (showOneMoreButton = true) => {
-    const badge = rollBadgeDraw();
+    const badge = rollBadgeDraw(scene);
     if (!badge) {
       resumeGame();
       return;
@@ -776,7 +777,7 @@ export function onPlayerPickupItem(scene, player, item) {
       .setDepth(30);
 
     const BadgeDrawForStep = () =>
-      BADGES[Math.floor(Math.random() * BADGES.length)] || badge;
+      BADGES[Math.floor(randomFrom(scene)() * BADGES.length)] || badge;
 
     const fastSpins = 5;
     const slowSpins = 7;

@@ -26,9 +26,10 @@ Railway에서 환경을 복제하면 DB와 네트워크도 새 환경으로 분�
 | `DJANGO_SECRET_KEY` | staging 전용의 긴 임의 문자열 |
 | `DJANGO_DEBUG` | `0` |
 | `DJANGO_SECURE_SSL_REDIRECT` | `1` |
-| `ALLOWED_HOSTS` | `<staging-django-domain>` |
+| `ALLOWED_HOSTS` | `<staging-django-domain>` (`healthcheck.railway.app`은 코드에서 자동 추가) |
 | `CORS_ALLOWED_ORIGINS` | `https://<staging-frontend-domain>` |
 | `CSRF_TRUSTED_ORIGINS` | `https://<staging-frontend-domain>,https://<staging-django-domain>` |
+| `GAME_FRONTEND_URL` | `https://<staging-frontend-domain>` |
 | `GOOGLE_OAUTH_CLIENT_ID` | staging용 Google OAuth Client ID |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | staging용 Google OAuth Client Secret |
 | `GOOGLE_OAUTH_REDIRECT_URI` | `https://<staging-django-domain>/auth/google/callback/` |
@@ -68,7 +69,7 @@ https://<staging-django-domain>/auth/google/callback/
 
 1. Railway staging의 `Postgres`와 `Redis` 서비스에서 **Settings -> Networking -> Public Access**를 각각 추가한다.
 2. `Postgres`의 `DATABASE_PUBLIC_URL`과 `Redis`의 `REDIS_PUBLIC_URL`을 복사한다. `DATABASE_URL`과 `REDIS_URL`은 Railway 내부 전용이므로 로컬에서 사용할 수 없다.
-3. `backend/.env.example`을 `backend/.env.local`로 복사하고, 아래 값을 staging 공개 URL로 바꾼다.
+3. `backend/.env.local.example`을 `backend/.env.local`로 복사하고, 아래 값을 staging 공개 URL로 바꾼다. 로컬에서는 `DJANGO_DEBUG=1`, `DJANGO_SECURE_SSL_REDIRECT=0`을 유지해야 브라우저의 HTTP 프리플라이트 요청이 리다이렉트되지 않는다.
 
 ```env
 DATABASE_URL=<Postgres의 DATABASE_PUBLIC_URL>
@@ -78,7 +79,7 @@ EVENT_GAME_WS_URL=ws://localhost:8081
 GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8000/auth/google/callback/
 ```
 
-4. `event-server/.env.example`을 `event-server/.env.local`로 복사한다. `EVENT_REDIS_URL`과 `EVENT_INTERNAL_SECRET`은 Django와 같은 staging 값을 사용하고, 다음 값을 확인한다.
+4. `event-server/.env.local.example`을 `event-server/.env.local`로 복사한다. `EVENT_REDIS_URL`과 `EVENT_INTERNAL_SECRET`은 Django와 같은 staging 값을 사용하고, 다음 값을 확인한다.
 
 ```env
 EVENT_FINALIZE_URL=http://localhost:8000/api/events/internal/finalize/

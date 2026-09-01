@@ -21,4 +21,7 @@ export const getEventLeaderboard = () => request("/api/events/leaderboard/", { m
 export const acceptEventConsent = () => request("/api/events/consent/", { method: "POST", body: "{}" });
 export const createEventEntry = () => request("/api/events/entry/", { method: "POST", body: "{}" });
 export const completeEventSignup = (nickname) => request("/auth/signup/", { method: "POST", body: JSON.stringify({ nickname }) });
-export const googleEventLogin = () => { window.location.assign(`${API_BASE_URL}/auth/google/login/?next=/`); };
+export const googleEventLogin = () => {
+  const returnTo = `${window.location.origin}/?event_signup=1`;
+  window.location.assign(`${API_BASE_URL}/auth/google/login/?next=${encodeURIComponent(returnTo)}`);
+};

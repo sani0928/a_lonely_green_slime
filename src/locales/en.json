@@ -227,6 +227,7 @@
     "endsAt": "Event ends {{endsAt}}. A run can last up to 60 minutes.",
     "consentRequired": "You must accept the event rules.",
     "requestFailed": "Unable to load the event. Please try again.",
+    "preparing": "The verified event mode with the normal game's full play experience is being prepared.",
     "serverAuthoritative": "Server-authoritative event run",
     "webSocketNotConfigured": "Event WebSocket is not configured.",
     "finished": "Event finished. Verified score: {{score}}",

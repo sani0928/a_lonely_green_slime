@@ -20,12 +20,11 @@
   ENDLESS_CAP_STEP,
   ENDLESS_CAP_MAX,
 } from "../config/constants.js";
+import { randomFrom } from "../core/random.js";
+import { difficultyProfileAt, maxActiveEnemiesAt, phaseAt, pickTier } from "../core/difficulty.js";
 
 export function getCurrentPhase(scene) {
-  const t = scene?.elapsedTime ?? 0;
-  if (t >= PHASE3_START_SEC) return 3;
-  if (t >= PHASE2_START_SEC) return 2;
-  return 1;
+  return phaseAt(scene?.elapsedTime ?? 0);
 }
 
 export function getPhaseProgress(scene) {
@@ -46,17 +45,7 @@ export function getPhaseProgress(scene) {
 }
 
 export function getMaxActiveEnemies(scene) {
-  const elapsed = Math.max(0, scene?.elapsedTime ?? 0);
-  const phase = getCurrentPhase(scene);
-  let baseCap = PHASE_ENEMY_CAP_P1;
-  if (phase === 2) baseCap = PHASE_ENEMY_CAP_P2;
-  if (phase === 3) baseCap = PHASE_ENEMY_CAP_P3;
-  if (elapsed < ENDLESS_START_SEC) return baseCap;
-
-  const endlessElapsed = elapsed - ENDLESS_START_SEC;
-  const step = Math.max(1, ENDLESS_CAP_STEP_SEC || 120);
-  const endlessBonus = Math.floor(endlessElapsed / step) * (ENDLESS_CAP_STEP || 40);
-  return Math.min(ENDLESS_CAP_MAX || 700, baseCap + endlessBonus);
+  return maxActiveEnemiesAt(Math.max(0, scene?.elapsedTime ?? 0));
 }
 
 // Player strength in 0..1.
@@ -109,18 +98,8 @@ export function updateDifficultyScaling(scene) {
   const ramp = PLAYER_SPEED_RAMP_SEC ?? 500;
   scene.playerSpeed = base + (cap - base) * (1 - Math.exp(-t / ramp));
 
-  const phase = getCurrentPhase(scene);
-  const spawnPressure = getSpawnPressure(scene);
-  const maxDelay = PHASE_SPAWN_DELAY_MAX[phase] ?? PHASE_SPAWN_DELAY_MAX[1];
-  const minDelay = PHASE_SPAWN_DELAY_MIN[phase] ?? PHASE_SPAWN_DELAY_MIN[1];
-
-  const newDelay = Phaser.Math.Clamp(
-    maxDelay - (maxDelay - minDelay) * spawnPressure,
-    minDelay,
-    maxDelay
-  );
-
-  scene.spawnEvent.delay = newDelay;
+  const profile = difficultyProfileAt(t, getPlayerStrength(scene));
+  scene.spawnEvent.delay = profile.spawnDelaySeconds * 1000;
 }
 
 function lerp(a, b, t) {
@@ -141,17 +120,5 @@ export function getTierWeights(progress) {
 }
 
 export function pickEnemyTier(scene) {
-  const progress = getDifficultyProgress(scene);
-  const { weak, mid, strong } = getTierWeights(progress);
-
-  const total = weak + mid + strong;
-  if (total <= 0) {
-    return "mid";
-  }
-
-  let r = Math.random() * total;
-  if (r < weak) return "weak";
-  r -= weak;
-  if (r < mid) return "mid";
-  return "strong";
+  return pickTier(randomFrom(scene), scene?.killCount ?? 0);
 }

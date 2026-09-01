@@ -31,6 +31,7 @@ import {
   getFrameIndex,
   getScaleForSize,
 } from "../render/entitySprites.js";
+import { randomFrom, randomInt } from "../core/random.js";
 
 const TIER_TO_TYPES = {
   weak: ["runner", "mite"],
@@ -83,7 +84,7 @@ function pickEnemyType(scene) {
   if (!pool.length) {
     return "grunt";
   }
-  const index = Phaser.Math.Between(0, pool.length - 1);
+  const index = randomInt(scene, 0, pool.length - 1);
   return pool[index];
 }
 
@@ -231,29 +232,29 @@ export function cullDistantEnemies(scene) {
 }
 
 /** Return one random position along the camera edge (+margin). */
-function getRandomSpawnPosition(view, margin) {
-  const side = Phaser.Math.Between(0, 3);
+function getRandomSpawnPosition(scene, view, margin) {
+  const side = randomInt(scene, 0, 3);
   switch (side) {
     case 0:
       return {
-        x: Phaser.Math.Between(view.x, view.x + view.width),
+        x: randomInt(scene, view.x, view.x + view.width),
         y: view.y - margin,
       };
     case 1:
       return {
         x: view.x + view.width + margin,
-        y: Phaser.Math.Between(view.y, view.y + view.height),
+        y: randomInt(scene, view.y, view.y + view.height),
       };
     case 2:
       return {
-        x: Phaser.Math.Between(view.x, view.x + view.width),
+        x: randomInt(scene, view.x, view.x + view.width),
         y: view.y + view.height + margin,
       };
     case 3:
     default:
       return {
         x: view.x - margin,
-        y: Phaser.Math.Between(view.y, view.y + view.height),
+        y: randomInt(scene, view.y, view.y + view.height),
       };
   }
 }
@@ -289,7 +290,7 @@ export function spawnEnemy(scene) {
   for (let i = 0; i < totalToSpawn; i += 1) {
     if (scene.enemies.countActive(true) >= cap) break;
 
-    const { x, y } = getRandomSpawnPosition(view, margin);
+    const { x, y } = getRandomSpawnPosition(scene, view, margin);
     const enemyType = pickSpawnType(scene);
     const textureKey = usePixel
       ? "entities"
@@ -307,7 +308,7 @@ export function spawnEnemy(scene) {
     const speedMin = baseMin * speedFactor;
     const speedMax = baseMax * speedFactor;
 
-    enemy.setData("speed", Phaser.Math.Between(speedMin, speedMax));
+    enemy.setData("speed", randomInt(scene, speedMin, speedMax));
     initializeEnemyStats(scene, enemy, enemyType, difficulty);
 
     if (usePixel) {
@@ -336,14 +337,14 @@ export function spawnEnemy(scene) {
       behavior = "shooter_behavior";
       enemy.setData("nextShotAt", (scene.elapsedTime || 0) + 1.4);
       // Random preferred orbit angle to reduce shooter clustering.
-      enemy.setData("preferredAngle", Math.random() * Math.PI * 2);
+      enemy.setData("preferredAngle", randomFrom(scene)() * Math.PI * 2);
     } else {
       behavior = "monsters_behavior";
       const baseAggro = 260;
       const variance = 40;
-      const aggroRadiusBase = baseAggro + Phaser.Math.Between(-variance, variance);
+      const aggroRadiusBase = baseAggro + randomInt(scene, -variance, variance);
       const aggroRadiusMul = PHASE_AGGRO_RADIUS_MULTIPLIER[phase] ?? 1;
-      enemy.setData("monsters_behaviorRoamAngle", Math.random() * Math.PI * 2);
+      enemy.setData("monsters_behaviorRoamAngle", randomFrom(scene)() * Math.PI * 2);
       enemy.setData("monsters_behaviorAggro", false);
       enemy.setData("monsters_behaviorBaseAggroRadius", aggroRadiusBase);
       enemy.setData("monsters_behaviorAggroRadius", aggroRadiusBase * aggroRadiusMul);
@@ -519,9 +520,9 @@ export function moveEnemiesTowardsPlayer(scene, builtOrGrid = null) {
           // Roam: slowly wandering direction with jitter.
           let roamAngle = enemy.getData("monsters_behaviorRoamAngle");
           if (typeof roamAngle !== "number") {
-            roamAngle = Math.random() * Math.PI * 2;
+            roamAngle = randomFrom(scene)() * Math.PI * 2;
           }
-          const jitter = Phaser.Math.FloatBetween(-0.08, 0.08);
+          const jitter = randomFrom(scene)() * 0.16 - 0.08;
           roamAngle += jitter;
           enemy.setData("monsters_behaviorRoamAngle", roamAngle);
 

@@ -2,7 +2,7 @@ import base64
 import hashlib
 import json
 import secrets
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from django.conf import settings
@@ -21,7 +21,15 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 
 def _frontend_url(request):
-    return request.GET.get("next") or "/"
+    configured = urlparse(settings.GAME_FRONTEND_URL)
+    requested = urlparse(request.GET.get("next", ""))
+    if (
+        requested.scheme == configured.scheme
+        and requested.netloc == configured.netloc
+        and requested.scheme in {"http", "https"}
+    ):
+        return request.GET["next"]
+    return f"{settings.GAME_FRONTEND_URL}/?event_signup=1"
 
 
 @require_GET
@@ -79,12 +87,12 @@ def google_callback(request):
     account = GoogleAccount.objects.filter(google_sub=claims["sub"]).select_related("user").first()
     if account is None:
         request.session["google_pending_claims"] = {"sub": claims["sub"], "email": claims["email"]}
-        return HttpResponseRedirect("/?event_signup=1")
+        return HttpResponseRedirect(f"{settings.GAME_FRONTEND_URL}/?event_signup=1")
     account.email = claims["email"]
     account.email_verified = True
     account.save(update_fields=["email", "email_verified", "updated_at"])
     login(request, account.user)
-    return HttpResponseRedirect(next_url if next_url.startswith("/") else "/")
+    return HttpResponseRedirect(next_url)
 
 
 @require_POST

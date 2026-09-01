@@ -32,6 +32,8 @@ import { hasBadge, modifyKillScore } from "./badgeSystem.js";
 import { returnBulletToCell } from "./cellSystem.js";
 import { applyPlayerDamage } from "./playerSystem.js";
 import { spawnHealthPotion, spawnPachinkoTicket } from "./upgradeSystem.js";
+import { randomFrom, randomInt } from "../core/random.js";
+import { bossHpAt, bossRewardAt, bossScalingStep } from "../core/bossRules.js";
 
 const BOSS_TYPES = [
   {
@@ -80,22 +82,15 @@ function getBossTypeById(id) {
 }
 
 function getBossHp(spawnOrdinal) {
-  const ordinal = Math.max(1, spawnOrdinal | 0);
-  const earlyCount = Math.max(1, BOSS_HP_EARLY_COUNT || 10);
-  if (ordinal <= earlyCount) {
-    return BOSS_HP_FIRST + (ordinal - 1) * BOSS_HP_EARLY_STEP;
-  }
-  return BOSS_HP_FIRST + (earlyCount - 1) * BOSS_HP_EARLY_STEP + (ordinal - earlyCount) * BOSS_HP_LATE_STEP;
+  return bossHpAt(spawnOrdinal);
 }
 
 function getBossReward(spawnOrdinal) {
-  return BOSS_REWARD_BASE + Math.max(1, spawnOrdinal | 0) * BOSS_REWARD_PER_SPAWN;
+  return bossRewardAt(spawnOrdinal);
 }
 
 function getBossScalingStep(spawnOrdinal) {
-  const groupSize = Math.max(1, BOSS_SCALING_GROUP_SIZE || 5);
-  const ordinal = Math.max(1, spawnOrdinal | 0);
-  return Math.floor((ordinal - 1) / groupSize);
+  return bossScalingStep(spawnOrdinal);
 }
 
 function getBossDamageTakenMultiplier(boss) {
@@ -157,22 +152,22 @@ function getBossSpawnPosition(scene) {
   const cam = scene.cameras.main;
   const view = cam.worldView;
   const margin = 180;
-  const side = Phaser.Math.Between(0, 3);
+  const side = randomInt(scene, 0, 3);
   let x;
   let y;
 
   if (side === 0) {
-    x = Phaser.Math.Between(view.left, view.right);
+    x = randomInt(scene, view.left, view.right);
     y = view.top - margin;
   } else if (side === 1) {
-    x = Phaser.Math.Between(view.left, view.right);
+    x = randomInt(scene, view.left, view.right);
     y = view.bottom + margin;
   } else if (side === 2) {
     x = view.left - margin;
-    y = Phaser.Math.Between(view.top, view.bottom);
+    y = randomInt(scene, view.top, view.bottom);
   } else {
     x = view.right + margin;
-    y = Phaser.Math.Between(view.top, view.bottom);
+    y = randomInt(scene, view.top, view.bottom);
   }
 
   return clampToWorld(scene, x, y);
@@ -361,10 +356,10 @@ function startBombPattern(scene, boss) {
   if (!player) return;
 
   const now = scene.elapsedTime || 0;
-  const count = Phaser.Math.Between(3, 5);
+  const count = randomInt(scene, 3, 5);
   for (let i = 0; i < count; i += 1) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = Phaser.Math.Between(70, 230);
+    const angle = randomFrom(scene)() * Math.PI * 2;
+    const dist = randomInt(scene, 70, 230);
     const pos = clampToWorld(
       scene,
       player.x + Math.cos(angle) * dist,
@@ -477,7 +472,7 @@ function killEnemyByBossAttack(scene, enemy, x = null, y = null) {
 }
 
 function startBossPattern(scene, boss) {
-  const pattern = BOSS_PATTERN_POOL[Phaser.Math.Between(0, BOSS_PATTERN_POOL.length - 1)];
+  const pattern = BOSS_PATTERN_POOL[randomInt(scene, 0, BOSS_PATTERN_POOL.length - 1)];
   boss.setData("lastPatternCooldown", pattern.cooldown);
 
   if (pattern.id === "charge") {
@@ -644,7 +639,7 @@ function updateOneBoss(scene, boss, dt) {
 
 function spawnBoss(scene) {
   if (!scene.bosses) return;
-  const bossType = BOSS_TYPES[Phaser.Math.Between(0, BOSS_TYPES.length - 1)];
+  const bossType = BOSS_TYPES[randomInt(scene, 0, BOSS_TYPES.length - 1)];
   const pos = getBossSpawnPosition(scene);
   const spawnOrdinal = (scene.bossSpawnCount || 0) + 1;
   scene.bossSpawnCount = spawnOrdinal;
@@ -667,7 +662,7 @@ function spawnBoss(scene) {
   boss.setData("maxHp", getBossHp(spawnOrdinal));
   boss.setData("hp", getBossHp(spawnOrdinal));
   boss.setData("rewardValue", getBossReward(spawnOrdinal));
-  boss.setData("speed", Phaser.Math.Between(bossType.speedMin, bossType.speedMax));
+  boss.setData("speed", randomInt(scene, bossType.speedMin, bossType.speedMax));
   boss.setData("bossState", "idle");
   boss.setData("nextPatternAt", (scene.elapsedTime || 0) + 2.0);
   boss.setData("dirIndex", 4);
@@ -793,8 +788,8 @@ export function onBulletHitBoss(scene, bullet, boss) {
   if (now < nextDamageAt) return;
   boss.setData("nextCellDamageAt", now + BOSS_CELL_HIT_COOLDOWN_SEC);
 
-  let damage = Math.max(1, Math.round((scene.playerAttackPower || 1) * Phaser.Math.FloatBetween(0.8, 1.2)));
-  const isCritical = hasBadge(scene, "critical") && Math.random() < 0.2;
+  let damage = Math.max(1, Math.round((scene.playerAttackPower || 1) * (0.8 + randomFrom(scene)() * 0.4)));
+  const isCritical = hasBadge(scene, "critical") && randomFrom(scene)() < 0.2;
   if (isCritical) damage *= 2;
   if (hasBadge(scene, "boss_hunter")) damage *= 2;
   damage = Math.max(1, Math.round(damage * getBossDamageTakenMultiplier(boss)));
@@ -848,19 +843,19 @@ export function onBulletHitBoss(scene, bullet, boss) {
     BOSS_COIN_MAX
   );
   spawnBossCoinBurst(scene, boss.x, boss.y, reward, coinCount);
-  if (Math.random() < (BOSS_PACHINKO_TICKET_DROP_CHANCE || 0)) {
+  if (randomFrom(scene)() < (BOSS_PACHINKO_TICKET_DROP_CHANCE || 0)) {
     spawnPachinkoTicket(scene, boss.x, boss.y, {
       burst: true,
-      angle: Math.random() * Math.PI * 2,
-      speed: Phaser.Math.Between(170, 270),
+      angle: randomFrom(scene)() * Math.PI * 2,
+      speed: randomInt(scene, 170, 270),
       stopAfter: 0.45,
     });
   }
-  if (Math.random() < (BOSS_HEALTH_POTION_DROP_CHANCE || 0)) {
+  if (randomFrom(scene)() < (BOSS_HEALTH_POTION_DROP_CHANCE || 0)) {
     spawnHealthPotion(scene, boss.x, boss.y, {
       burst: true,
-      angle: Math.random() * Math.PI * 2,
-      speed: Phaser.Math.Between(150, 240),
+      angle: randomFrom(scene)() * Math.PI * 2,
+      speed: randomInt(scene, 150, 240),
       stopAfter: 0.45,
     });
   }
@@ -874,8 +869,8 @@ export function spawnBossCoinBurst(scene, x, y, totalValue, coinCount) {
   const baseValue = Math.max(1, Math.round((totalValue || 0) / count));
 
   for (let i = 0; i < count; i += 1) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = Phaser.Math.Between(8, 42);
+    const angle = randomFrom(scene)() * Math.PI * 2;
+    const dist = randomInt(scene, 8, 42);
     const spawnX = x + Math.cos(angle) * dist;
     const spawnY = y + Math.sin(angle) * dist;
     let coin;
@@ -924,7 +919,7 @@ export function spawnBossCoinBurst(scene, x, y, totalValue, coinCount) {
     coin.setData("coinValue", baseValue);
     coin.setData("spawnTime", scene.elapsedTime || 0);
     coin.setData("burstStopAt", (scene.elapsedTime || 0) + 0.45);
-    const speed = Phaser.Math.Between(140, 300);
+    const speed = randomInt(scene, 140, 300);
     coin.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
   }
 }

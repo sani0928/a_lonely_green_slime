@@ -81,11 +81,12 @@ export async function showEventOverlay(scene) {
     rows(el.querySelector("#event-high-score-list"), leaderboard.high_score);
     rows(el.querySelector("#event-aggregate-list"), leaderboard.aggregate);
     signupRow.hidden = !status.signup_required;
-    consentRow.hidden = !status.authenticated || status.signup_required || status.status !== "open";
+    consentRow.hidden = !status.authenticated || status.signup_required || status.status !== "open" || !status.authoritative_ready;
     loginBtn.hidden = status.authenticated || status.signup_required;
-    playBtn.hidden = !status.authenticated || status.signup_required || status.status !== "open";
+    playBtn.hidden = !status.authenticated || status.signup_required || status.status !== "open" || !status.authoritative_ready;
     if (status.status === "maintenance") statusText.textContent = t("event.maintenance");
     else if (status.status !== "open") statusText.textContent = t("event.closed");
+    else if (!status.authoritative_ready) statusText.textContent = t("event.preparing");
     else {
       const locale = getLocale() === "ko" ? "ko-KR" : "en-US";
       const endsAt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(status.ends_at));

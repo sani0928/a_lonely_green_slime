@@ -18,7 +18,6 @@ function loadLocalEnv(filename, inheritedKeys) {
 }
 
 const inheritedEnvironment = new Set(Object.keys(process.env));
-loadLocalEnv(".env", inheritedEnvironment);
 loadLocalEnv(".env.local", inheritedEnvironment);
 
 const port = Number(process.env.PORT || 8081);
@@ -29,6 +28,7 @@ const tickMs = 50;
 const snapshotMs = 100;
 const stateSaveMs = 1000;
 const reconnectMs = 30_000;
+const maxPlayMs = 60 * 60 * 1000;
 const allowedOrigin = process.env.EVENT_ALLOWED_ORIGIN || "";
 
 if (!redisUrl || !finalizeUrl || !internalSecret) throw new Error("EVENT_REDIS_URL, EVENT_FINALIZE_URL, and EVENT_INTERNAL_SECRET are required.");
@@ -44,7 +44,13 @@ async function consumeTicket(ticket) {
 }
 
 async function persistGame(game) {
-  await redis.set(`event:run:${game.runId}`, JSON.stringify({ seed: game.core.seed, state: game.core.snapshot(), pauseUsed: game.pauseUsed }), { EX: 3_900 });
+  await redis.set(`event:run:${game.runId}`, JSON.stringify({
+    seed: game.core.seed,
+    state: game.core.snapshot(),
+    pauseUsed: game.pauseUsed,
+    startedAt: game.startedAt,
+    lastInputSequence: game.lastInputSequence,
+  }), { EX: 3_900 });
 }
 
 async function finishGame(game) {
@@ -68,11 +74,28 @@ async function loadGame(ticket) {
   const saved = await redis.get(`event:run:${ticket.run_id}`);
   const restored = saved ? JSON.parse(saved) : null;
   const core = new EventGameCore(restored?.seed || ticket.seed, restored?.state || null);
-  game = { runId: ticket.run_id, userId: ticket.user_id, core, pauseUsed: Boolean(restored?.pauseUsed), sockets: new Set(), paused: false, lastSavedAt: 0, lastSnapshotAt: 0 };
+  game = {
+    runId: ticket.run_id,
+    userId: ticket.user_id,
+    core,
+    pauseUsed: Boolean(restored?.pauseUsed),
+    startedAt: Number(restored?.startedAt) || Date.now(),
+    lastInputSequence: Number(restored?.lastInputSequence) || 0,
+    sockets: new Set(),
+    paused: false,
+    lastSavedAt: 0,
+    lastSnapshotAt: 0,
+  };
   game.timer = setInterval(async () => {
-    if (game.paused) return;
-    game.core.tick(tickMs / 1000);
     const now = Date.now();
+    // Event timing is wall-clock based. UI pauses and reconnect grace periods
+    // freeze simulation only; they must not extend the eligible run window.
+    if (now - game.startedAt >= maxPlayMs) {
+      game.core.finished = true;
+      await finishGame(game);
+      return;
+    }
+    if (!game.paused) game.core.tick(tickMs / 1000);
     if (now - game.lastSnapshotAt >= snapshotMs) {
       game.lastSnapshotAt = now;
       const message = JSON.stringify({ type: "state", state: game.core.snapshot() });
@@ -117,14 +140,32 @@ wss.on("connection", (socket, request) => {
       clearTimeout(game.reconnectTimer);
       game.paused = false;
       game.sockets.add(socket);
-      socket.send(JSON.stringify({ type: "ready", run_id: game.runId, state: game.core.snapshot(), max_play_seconds: 3600 }));
+      socket.send(JSON.stringify({
+        type: "ready",
+        run_id: game.runId,
+        state: game.core.snapshot(),
+        max_play_seconds: 3600,
+        deadline_at: game.startedAt + maxPlayMs,
+      }));
       socket.on("message", (inputRaw) => {
         try {
           const input = JSON.parse(inputRaw.toString());
           const now = Date.now();
           if (input.type === "input" && now - (game.lastInputAt || 0) >= 20) {
+            if (!Number.isSafeInteger(input.sequence) || input.sequence <= game.lastInputSequence) return;
+            if (!input.keys || Object.keys(input.keys).some((key) => !["up", "down", "left", "right"].includes(key) || typeof input.keys[key] !== "boolean")) return;
             game.lastInputAt = now;
+            game.lastInputSequence = input.sequence;
             game.core.setInput(input.keys);
+          }
+          if (input.type === "choice" && typeof input.choice === "string") {
+            game.core.choose(input.choice);
+          }
+          if (input.type === "pause") {
+            game.paused = true;
+          }
+          if (input.type === "resume") {
+            game.paused = false;
           }
         } catch (_) {}
       });

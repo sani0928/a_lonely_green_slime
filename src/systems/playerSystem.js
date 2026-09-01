@@ -8,27 +8,16 @@ import {
   getEntityIndexForPlayer,
   getFrameIndex,
 } from "../render/entitySprites.js";
+import { movementVector } from "../core/movement.js";
 
 export function handleMovement(scene) {
   const { cursors, wasd, playerSpeed, player } = scene;
-  let vx = 0;
-  let vy = 0;
-
   const up = cursors.up.isDown || wasd.up.isDown;
   const down = cursors.down.isDown || wasd.down.isDown;
   const left = cursors.left.isDown || wasd.left.isDown;
   const right = cursors.right.isDown || wasd.right.isDown;
 
-  if (left) vx -= 1;
-  if (right) vx += 1;
-  if (up) vy -= 1;
-  if (down) vy += 1;
-
-  if (vx !== 0 && vy !== 0) {
-    const norm = Math.sqrt(2);
-    vx /= norm;
-    vy /= norm;
-  }
+  const { x: vx, y: vy } = movementVector({ up, down, left, right });
 
   player.setVelocity(vx * playerSpeed, vy * playerSpeed);
 

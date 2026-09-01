@@ -407,6 +407,11 @@ export default class MainMenuScene extends Phaser.Scene {
       this.scale.off("resize", this.handleResize, this);
       stopSceneBgm(this, 0);
     });
+
+    if (new URLSearchParams(window.location.search).get("event_signup") === "1") {
+      window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+      this.time.delayedCall(0, () => showEventOverlay(this));
+    }
   }
 
   getMenuLayout() {

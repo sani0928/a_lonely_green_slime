@@ -5,6 +5,7 @@ import {
   CELL_MAX_COUNT,
   USE_PIXEL_SPRITES,
 } from "../config/constants.js";
+import { randomFrom } from "../core/random.js";
 
 // 이론상 장착 가능한 최대 뱃지 슬롯 수 (실제 사용 슬롯 수는 scene.badgeSlotCount로 제한)
 const MAX_EQUIPPED = 8;
@@ -96,12 +97,12 @@ export function getBadgesByRarity(rarity) {
   return BADGES.filter((b) => b.rarity === rarity);
 }
 
-export function rollBadgeDraw() {
+export function rollBadgeDraw(scene) {
   const entries = Object.entries(RARITY_WEIGHTS);
   const total = entries.reduce((sum, [, w]) => sum + w, 0);
   if (total <= 0) return null;
 
-  let r = Math.random() * total;
+  let r = randomFrom(scene)() * total;
   let selectedRarity = entries[0][0];
   for (let i = 0; i < entries.length; i += 1) {
     const [rarity, weight] = entries[i];
@@ -114,7 +115,7 @@ export function rollBadgeDraw() {
 
   const pool = BADGES.filter((b) => b.rarity === selectedRarity);
   if (!pool.length) return null;
-  const index = Math.floor(Math.random() * pool.length);
+  const index = Math.floor(randomFrom(scene)() * pool.length);
   return pool[index];
 }
 
@@ -125,7 +126,7 @@ export function getAvailableBadges(scene, maxCount = 2) {
 
   const shuffled = [...candidates];
   for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(randomFrom(scene)() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
 

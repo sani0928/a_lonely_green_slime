@@ -2,15 +2,19 @@ import { spawn } from "node:child_process";
 import process from "node:process";
 
 const isWindows = process.platform === "win32";
-const npm = isWindows ? "npm.cmd" : "npm";
 const python = isWindows ? "backend\\.venv\\Scripts\\python.exe" : "backend/.venv/bin/python";
+let shuttingDown = false;
+const processes = [];
 
-const processes = [
-  { name: "web", command: npm, args: ["run", "dev:web"] },
+const commands = [
+  // Spawn Node entry points directly: Windows cannot spawn .cmd shims without a shell.
+  { name: "web", command: process.execPath, args: ["node_modules/vite/bin/vite.js"] },
   { name: "api", command: python, args: ["backend/manage.py", "runserver"] },
-  { name: "event", command: npm, args: ["--prefix", "event-server", "start"] },
-].map(({ name, command, args }) => {
-  const child = spawn(command, args, { stdio: "inherit", shell: false });
+  { name: "event", command: process.execPath, args: ["server.js"], cwd: "event-server" },
+];
+
+for (const { name, command, args, cwd } of commands) {
+  const child = spawn(command, args, { cwd, stdio: "inherit", shell: false });
   child.on("exit", (code) => {
     if (code && !shuttingDown) {
       console.error(`[${name}] exited with code ${code}`);
@@ -21,10 +25,9 @@ const processes = [
     console.error(`[${name}] failed to start: ${error.message}`);
     shutdown(1);
   });
-  return child;
-});
+  processes.push(child);
+}
 
-let shuttingDown = false;
 function shutdown(code = 0) {
   if (shuttingDown) return;
   shuttingDown = true;

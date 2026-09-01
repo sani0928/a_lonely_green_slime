@@ -19,14 +19,20 @@ def _load_local_env(path: Path, inherited_keys: set[str]) -> None:
 
 
 _inherited_environment = set(os.environ)
-_load_local_env(BASE_DIR / ".env", _inherited_environment)
 _load_local_env(BASE_DIR / ".env.local", _inherited_environment)
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-change-in-production")
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
+# Railway deployment health checks use this Host header, not the public domain.
+if "healthcheck.railway.app" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("healthcheck.railway.app")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -124,6 +130,7 @@ CSRF_TRUSTED_ORIGINS = _split_csv_env(
     ),
 )
 CORS_ALLOW_CREDENTIALS = True
+GAME_FRONTEND_URL = os.environ.get("GAME_FRONTEND_URL", "http://localhost:5173").rstrip("/")
 
 # HTTPS 환경(Railway 커스텀 도메인)에서만 secure 쿠키를 사용한다.
 SESSION_COOKIE_SECURE = not DEBUG
@@ -141,3 +148,4 @@ GOOGLE_OAUTH_REDIRECT_URI = os.environ.get("GOOGLE_OAUTH_REDIRECT_URI", "")
 EVENT_INTERNAL_SECRET = os.environ.get("EVENT_INTERNAL_SECRET", "")
 EVENT_REDIS_URL = os.environ.get("EVENT_REDIS_URL", os.environ.get("REDIS_URL", ""))
 EVENT_GAME_WS_URL = os.environ.get("EVENT_GAME_WS_URL", "")
+EVENT_AUTHORITATIVE_CORE_READY = os.environ.get("EVENT_AUTHORITATIVE_CORE_READY", "0") == "1"
